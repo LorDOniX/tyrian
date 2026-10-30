@@ -61,7 +61,7 @@ test('game over freezes simulation, restart resets all state', () => {
   assert.equal(state.status, 'gameOver');
   const snapshot = structuredClone(state);
   updateGame(state, { x: 1, y: 1, fire: true }, 0.05);
-  assert.deepEqual(state, snapshot);
+  assert.deepEqual({ ...state, effects: [] }, { ...snapshot, effects: [] });
   restartGame(state);
   assert.deepEqual(state, createGame());
 });

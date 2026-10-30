@@ -9,7 +9,16 @@ function required<T extends HTMLElement>(selector: string): T {
   if (!element) throw new Error(`Chybí ${selector}`);
   return element;
 }
-const view = createScene(required('#app'));
+const container = required('#app');
+container.textContent = 'Načítání grafiky…';
+const view = await createScene(container).catch((error: unknown) => {
+  container.textContent = 'Grafiku se nepodařilo načíst. Obnov stránku a zkus to znovu.';
+  throw error;
+});
+// Canvas už je připojený; odstraníme pouze zprávu o načítání.
+for (const node of Array.from(container.childNodes)) {
+  if (node.nodeType === Node.TEXT_NODE) node.remove();
+}
 const score = required('#score');
 const lives = required('#lives');
 const progress = required<HTMLProgressElement>('#progress');

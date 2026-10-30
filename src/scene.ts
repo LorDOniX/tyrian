@@ -1,3 +1,4 @@
+import { createSpriteEffects } from './sprite-effects.ts';
 import { bossCircles } from './boss.ts';
 import { createBossModel } from './boss-model.ts';
 import * as THREE from 'three';
@@ -6,7 +7,8 @@ import { createTerrain } from './terrain.ts';
 import { WORLD_WIDTH, WORLD_HEIGHT, TURRET_EXTENT } from './game.ts';
 import type { GameState, Body } from './game.ts';
 
-export function createScene(container: HTMLElement) {
+export async function createScene(container: HTMLElement) {
+  const sprites = await createSpriteEffects();
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#050b18');
 
@@ -15,7 +17,9 @@ export function createScene(container: HTMLElement) {
   camera.position.set(0, 0, 30);
   camera.lookAt(0, 0, 0);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  let renderer: THREE.WebGLRenderer;
+  try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
+  catch (error) { sprites.dispose(); throw error; }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.appendChild(renderer.domElement);
 
@@ -65,21 +69,14 @@ export function createScene(container: HTMLElement) {
     return { stars, positions, original: positions.slice(), speed };
   });
 
-  const bulletGeometry = new THREE.BoxGeometry(0.12, 0.65, 0.12);
-  const bulletMaterial = new THREE.MeshBasicMaterial({ color: '#67e8f9' });
-  const hostileGeometry = new THREE.SphereGeometry(0.22, 12, 8);
-  const hostileMaterial = new THREE.MeshBasicMaterial({ color: '#ff9e35', depthTest: false });
   const coreGeometry = new THREE.SphereGeometry(0.1, 8, 6);
-  const coreMaterial = new THREE.MeshBasicMaterial({ color: '#fff9cc', depthTest: false });
   const gunnerMaterial = new THREE.MeshStandardMaterial({ color: '#f59e0b', metalness: 0.5, roughness: 0.35 });
   const muzzleGeometry = new THREE.BoxGeometry(0.25, 0.65, 0.25);
   const chargingMaterial = new THREE.MeshBasicMaterial({ color: '#ffef8a' });
   const enemyGeometry = new THREE.BoxGeometry(1.1, 1.1, 0.5);
   const enemyMaterial = new THREE.MeshStandardMaterial({ color: '#fb4563', metalness: 0.3, roughness: 0.4 });
-  const effectGeometry = new THREE.RingGeometry(0.7, 1, 24);
-  const effectMaterial = new THREE.MeshBasicMaterial({ color: '#ffb454', side: THREE.DoubleSide });
   const debugGeometry = new THREE.RingGeometry(0.97, 1, 32);
-  const debugMaterial = new THREE.MeshBasicMaterial({ color: '#a3ff8f', depthTest: false });
+  const debugMaterial = new THREE.MeshBasicMaterial({ color: '#a3ff8f', depthTest: false, depthWrite: false, transparent: true });
   const bulletModels = new Map<number, THREE.Object3D>();
   const turretBaseGeometry = new THREE.CylinderGeometry(0.7, 0.95, 0.5, 8);
   turretBaseGeometry.rotateX(Math.PI / 2);
@@ -134,21 +131,14 @@ export function createScene(container: HTMLElement) {
       (state.invulnerabilityLeft === 0 || Math.floor(state.time * 12) % 2 === 0);
     flame.scale.y = 0.85 + Math.sin(state.time * 25) * 0.15;
     const place = (model: THREE.Object3D, body: Body) => { model.position.set(body.x, body.y, 0); };
-    sync(state.bullets, bulletModels, (bullet) => {
-      if (bullet.owner === 'player') return new THREE.Mesh(bulletGeometry, bulletMaterial);
-      const model = new THREE.Group();
-      const outer = new THREE.Mesh(hostileGeometry, hostileMaterial);
-      outer.renderOrder = 10;
-      const core = new THREE.Mesh(coreGeometry, coreMaterial);
-      core.position.z = 0.2;
-      core.renderOrder = 11;
-      model.add(outer, core);
-      return model;
-    }, (model, bullet) => {
-      place(model, bullet);
-      model.position.z = 1.5;
-      model.rotation.z = Math.atan2(bullet.vy, bullet.vx) - Math.PI / 2;
-    });
+    sync(state.bullets, bulletModels, bullet => sprites.create(bullet.owner === 'player' ? 'playerShot' : 'enemyShot'),
+      (model, bullet) => {
+        sprites.animate(model, bullet.owner === 'player' ? 'playerShot' : 'enemyShot', state.time);
+        place(model, bullet);
+        model.position.z = 2;
+        model.renderOrder = 20; // Projektily zůstanou nad explozemi a 3D modely.
+        model.rotation.z = Math.atan2(bullet.vy, bullet.vx) - Math.PI / 2;
+      });
     sync(state.enemies, enemyModels, (enemy) => {
       const model = new THREE.Group();
       model.add(new THREE.Mesh(enemyGeometry, enemy.kind === 'gunner' ? gunnerMaterial : enemyMaterial));
@@ -206,9 +196,10 @@ export function createScene(container: HTMLElement) {
       model.rotation.z = 0.3;
       return model;
     }, (model, wreck) => { model.position.set(wreck.x, wreck.y, -4); });
-    sync(state.effects, effectModels, () => new THREE.Mesh(effectGeometry, effectMaterial), (model, effect) => {
-      model.position.set(effect.x, effect.y, 1);
-      model.scale.setScalar(0.1 + effect.age * 4);
+    sync(state.effects, effectModels, effect => sprites.create(effect.kind), (model, effect) => {
+      sprites.animate(model, effect.kind, effect.age, effect.scale);
+      model.position.set(effect.x, effect.y, 1.5);
+      model.renderOrder = 10;
     });
     const bossDebug = state.boss && state.boss.mode !== 'destroyed'
       ? bossCircles(state.boss).map((circle, index) => ({ ...circle, id: -100 - index })) : [];
@@ -216,6 +207,7 @@ export function createScene(container: HTMLElement) {
       () => new THREE.Mesh(debugGeometry, debugMaterial), (model, body) => {
         model.position.set(body.x, body.y, 2);
         model.scale.setScalar(body.radius);
+        model.renderOrder = 30;
       });
     bossModel.render(state.boss, state.time, state.stageTimer);
     terrain.render(state.scrollDistance, state.player.x, state.player.y, showTerrain, ship.visible);
@@ -234,12 +226,18 @@ export function createScene(container: HTMLElement) {
     observer.disconnect();
     terrain.dispose();
     bossModel.dispose();
+    // Sprity vlastní svůj sdílený materiál, geometrii a texturu.
+    for (const models of [bulletModels, effectModels]) {
+      models.forEach(model => scene.remove(model));
+      models.clear();
+    }
+    sprites.dispose();
     // Evidence zahrnuje i sdílené prostředky modelů odstraněných během hry.
     const geometries = new Set<THREE.BufferGeometry>([
-      bulletGeometry, enemyGeometry, effectGeometry, debugGeometry, hostileGeometry, coreGeometry, muzzleGeometry, turretBaseGeometry, turretHeadGeometry,
+      enemyGeometry, debugGeometry, coreGeometry, muzzleGeometry, turretBaseGeometry, turretHeadGeometry,
     ]);
     const materials = new Set<THREE.Material>([
-      bulletMaterial, enemyMaterial, effectMaterial, debugMaterial, hostileMaterial, coreMaterial, gunnerMaterial, chargingMaterial, turretMaterial, wreckMaterial,
+      enemyMaterial, debugMaterial, gunnerMaterial, chargingMaterial, turretMaterial, wreckMaterial,
     ]);
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh || object instanceof THREE.Points) {

@@ -5,7 +5,8 @@ Základ vykreslování vysvětluje [faze1.md](faze1.md), nepřátele a herní pr
 [faze2.md](faze2.md). Fáze 3 přidává [první úroveň](faze3.md): pevné vlny, střelce s mířenými
 střelami a vítězství. [Fáze 4](faze4.md) přidává posouvající se 3D terén,
 pozemní věže, trosky a stín lodi. [Fáze 5](faze5.md) zakončuje misi bossem
-se dvěma fázemi, mířenou salvou a vějířem střel. Zachovává 3 životy, skóre, pauzu a restart.
+se dvěma fázemi, mířenou salvou a vějířem střel. [Fáze 6](faze6.md) používá
+sprite exploze, zásahy a projektily z přidaných Tyrian assetů. Zachovává 3 životy, skóre, pauzu a restart.
 
 ## Spuštění
 
@@ -26,6 +27,7 @@ Produkční hra vždy začíná vlnami; restart po výsledku také vrací začá
 ## Příkazy
 
 - `npm run dev` – vývojový server.
+- `npm run assets:prepare` – volitelné obnovení sprite atlasu ze zdrojů (vyžaduje FFmpeg).
 - `npm test` – testy kolizí a herních pravidel.
 - `npm run typecheck` – kontrola typů.
 - `npm run build` – kontrola typů a produkční sestavení do `dist/`.
@@ -42,6 +44,9 @@ Produkční hra vždy začíná vlnami; restart po výsledku také vrací začá
 - `src/collision.ts` – kolizní výpočty ve 2D.
 - `src/terrain.ts` – opakované segmenty a stylizovaný stín.
 - `src/terrain-layout.ts` – výpočet poloh segmentů.
+- `src/sprite-clips.ts` – výřezy a časování sprite animací.
+- `src/sprite-effects.ts` – sdílená textura a sprite modely.
+- `src/assets/tyrian-fx.png` – připravený průhledný atlas.
 - `src/scene.ts` – kamera, modely a synchronizace zobrazení.
 - `tests/` – testy kolizí, herních pravidel a celé úrovně.
 - `src/style.css` – základní styly.

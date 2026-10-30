@@ -1,3 +1,5 @@
+import { clipDuration } from './sprite-clips.ts';
+import type { EffectKind } from './sprite-clips.ts';
 import { createBoss, updateBoss, bossCircles } from './boss.ts';
 import type { Boss } from './boss.ts';
 import { circlesOverlap, sweepHit } from './collision.ts';
@@ -20,7 +22,7 @@ export type GroundTarget = Body & {
 export type Wreck = { id: number; x: number; levelY: number; y: number };
 export type Bullet = Body & { owner: 'player' | 'enemy'; vx: number; vy: number };
 export type Input = { x: number; y: number; fire: boolean };
-export type Effect = { id: number; x: number; y: number; age: number };
+export type Effect = { id: number; x: number; y: number; age: number; kind: EffectKind; scale: number };
 export type GameState = {
   missionStage: 'waves' | 'warning' | 'boss' | 'bossDestroyed';
   stageTimer: number; boss: Boss | null;
@@ -59,10 +61,13 @@ function makeBullet(state: GameState, x: number, y: number, owner: Bullet['owner
 }
 
 export function updateGame(state: GameState, input: Input, elapsed: number): void {
-  if (state.status !== 'playing') return;
-  if (state.lives <= 0) { state.status = 'gameOver'; return; }
+  if (state.status === 'paused') return;
   const dt = Math.max(0, Math.min(elapsed, 0.05));
   if (dt === 0) return;
+  // Po výsledku doběhnou pouze již vytvořené efekty, herní svět stojí.
+  state.effects = state.effects.filter(effect => (effect.age += dt) < clipDuration(effect.kind));
+  if (state.status !== 'playing') return;
+  if (state.lives <= 0) { state.status = 'gameOver'; return; }
   state.time += dt;
   if (state.missionStage === 'warning') {
     state.stageTimer -= dt;
@@ -95,7 +100,6 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     wreck.y = wreck.levelY - state.scrollDistance;
     return wreck.y >= -13;
   });
-  state.effects = state.effects.filter(effect => (effect.age += dt) < 0.35);
   state.invulnerabilityLeft = Math.max(0, state.invulnerabilityLeft - dt);
   state.cooldown = Math.max(0, state.cooldown - dt);
   const length = Math.hypot(input.x, input.y);
@@ -111,7 +115,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     state.stageTimer = Math.max(0, previous - dt);
     if (Math.floor(previous / 0.15) !== Math.floor(state.stageTimer / 0.15) && state.boss) {
       const offset = Math.floor(previous / 0.15) % 3 - 1;
-      state.effects.push({ id: state.nextId++, x: state.boss.x + offset * 1.5, y: state.boss.y + offset * 0.5, age: 0 });
+      state.effects.push({ id: state.nextId++, x: state.boss.x + offset * 1.5, y: state.boss.y + offset * 0.5, age: 0, kind: 'explosion', scale: 1.2 });
     }
     if (state.stageTimer === 0) state.status = 'victory';
     return;
@@ -164,15 +168,28 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       if (times.length) hits.push({ time: Math.min(...times), bullet, enemy: state.boss });
     }
   }
-  const explode = (x: number, y: number) => state.effects.push({ id: state.nextId++, x, y, age: 0 });
+  const effect = (kind: EffectKind, x: number, y: number, scale = 1) =>
+    state.effects.push({ id: state.nextId++, x, y, age: 0, kind, scale });
+  const explode = (x: number, y: number) => effect('explosion', x, y);
+  const hitPosition = (body: Body, time: number) => ({
+    x: body.previousX + (body.x - body.previousX) * time,
+    y: body.previousY + (body.y - body.previousY) * time,
+  });
   hits.sort((a, b) => a.time - b.time || a.bullet.id - b.bullet.id || a.enemy.id - b.enemy.id);
   for (const { bullet, enemy, time } of hits) {
     if (deadBullets.has(bullet.id) || deadEnemies.has(enemy.id)) continue;
     deadBullets.add(bullet.id);
-    if (enemy.kind === 'boss' && enemy.mode === 'entering') continue;
+    const contact = hitPosition(bullet, time);
+    if (enemy.kind === 'boss' && enemy.mode === 'entering') {
+      effect('shield', contact.x, contact.y);
+      continue;
+    }
     enemy.hp--;
     enemy.hitLeft = 0.12;
-    if (enemy.hp > 0) continue;
+    if (enemy.hp > 0) {
+      effect('impact', contact.x, contact.y);
+      continue;
+    }
     deadEnemies.add(enemy.id);
     if (enemy.kind === 'boss') {
       enemy.hp = 0;
@@ -189,13 +206,20 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   const damagePlayer = () => {
     if (state.invulnerabilityLeft > 0) return;
     state.lives--;
+    effect(state.lives === 0 ? 'explosion' : 'impact', player.x, player.y, state.lives === 0 ? 1 : 1.5);
     state.invulnerabilityLeft = 1;
   };
   // Všechny dotýkající se střely se spotřebují, i během ochrany hráče.
   const threats = state.bullets.filter(bullet => bullet.owner === 'enemy')
     .map(bullet => ({ bullet, time: sweepHit(bullet, player) }))
     .filter(hit => hit.time !== null).sort((a, b) => a.time! - b.time!);
-  for (const { bullet } of threats) { deadBullets.add(bullet.id); damagePlayer(); }
+  for (const { bullet, time } of threats) {
+    deadBullets.add(bullet.id);
+    if (state.invulnerabilityLeft > 0) {
+      const contact = hitPosition(bullet, time!);
+      effect('shield', contact.x, contact.y);
+    } else damagePlayer();
+  }
   for (const enemy of state.enemies) {
     if (state.invulnerabilityLeft > 0) break;
     if (!deadEnemies.has(enemy.id) && circlesOverlap(player, enemy)) {
