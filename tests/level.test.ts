@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, updateGame, aimVelocity, restartGame, pauseGame, resumeGame } from '../src/game.ts';
 import type { Enemy, Bullet, GameState } from '../src/game.ts';
-import { LEVEL_DURATION, LEVEL_EVENTS } from '../src/level.ts';
+import { LEVEL_DURATION, LEVEL_EVENTS, GROUND_TARGETS } from '../src/level.ts';
 const idle = { x: 0, y: 0, fire: false };
 const enemy = (id = 90): Enemy => ({ id, x: 0, y: 7, previousX: 0, previousY: 7,
   radius: 0.75, speed: 4, kind: 'gunner', hp: 2, phase: 'charging', shotLeft: 0.8, shots: 0, hitLeft: 0 });
@@ -12,7 +12,7 @@ const bullet = (id: number, x: number, y: number, owner: Bullet['owner'] = 'play
 const step = (state: GameState, count = 1) => {
   for (let i = 0; i < count; i++) updateGame(state, idle, 0.05);
 };
-const isolated = () => { const s = createGame(); s.nextEvent = LEVEL_EVENTS.length; return s; };
+const isolated = () => { const s = createGame(); s.nextEvent = LEVEL_EVENTS.length; s.nextGround = GROUND_TARGETS.length; return s; };
 
 test('level events sorted, simultaneous events once, no spawn during pause', () => {
   assert.ok(LEVEL_EVENTS.every((event, i) => i === 0 || LEVEL_EVENTS[i - 1]!.at <= event.at));
@@ -116,6 +116,7 @@ test('victory waits for time, events and threats; player bullets do not block it
   step(state);
   assert.equal(state.status, 'playing');
   state.nextEvent = LEVEL_EVENTS.length;
+  state.nextGround = GROUND_TARGETS.length;
   state.enemies = [];
   state.bullets = [bullet(91, 4, 0, 'enemy')];
   step(state);

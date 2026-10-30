@@ -27,3 +27,9 @@ export function levelPart(time: number): string {
   if (time >= 15) return '2 / 3 · Střelci';
   return '1 / 3 · Formace';
 }
+
+export const GROUND_TARGETS: readonly Readonly<{ x: number; levelY: number }>[] = Object.freeze([
+  Object.freeze({ x: -4, levelY: 49 }),  // vstup přibližně v 9. sekundě
+  Object.freeze({ x: 4, levelY: 117 }),  // 26. sekunda
+  Object.freeze({ x: 0, levelY: 185 }),  // 43. sekunda
+]);

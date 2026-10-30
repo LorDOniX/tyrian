@@ -3,7 +3,8 @@
 Prototyp vertikální střílečky: 3D modely, ortografická kamera a pohyb ve 2D.
 Základ vykreslování vysvětluje [faze1.md](faze1.md), nepřátele a herní pravidla
 [faze2.md](faze2.md). Fáze 3 přidává [první úroveň](faze3.md): pevné vlny, střelce s mířenými
-střelami a vítězství. Zachovává 3 životy, skóre, pauzu a restart.
+střelami a vítězství. [Fáze 4](faze4.md) přidává posouvající se 3D terén,
+pozemní věže, trosky a stín lodi. Zachovává 3 životy, skóre, pauzu a restart.
 
 ## Spuštění
 
@@ -14,7 +15,7 @@ npm run dev
 
 Šipky / WASD: pohyb. Mezerník: střelba. Esc: pauza. Enter: pokračování / restart.
 Kamera je pevná. Při opuštění okna se hra pozastaví. Kolizní kruhy lze zapnout
-zaškrtávátkem. Ovládání je zatím pouze klávesnicí.
+zaškrtávátkem. Přepínač Terén skrývá pouze dekoraci, nikoli věže a střely. Ovládání je zatím pouze klávesnicí.
 
 Pro testy používej Node.js 22.18+ (nebo novější podporovanou řadu).
 
@@ -32,6 +33,8 @@ Pro testy používej Node.js 22.18+ (nebo novější podporovanou řadu).
 - `src/level.ts` – časované formace a části úrovně.
 - `src/game.ts` – herní stav a pravidla bez Three.js.
 - `src/collision.ts` – kolizní výpočty ve 2D.
+- `src/terrain.ts` – opakované segmenty a stylizovaný stín.
+- `src/terrain-layout.ts` – výpočet poloh segmentů.
 - `src/scene.ts` – kamera, modely a synchronizace zobrazení.
 - `tests/` – testy kolizí, herních pravidel a celé úrovně.
 - `src/style.css` – základní styly.

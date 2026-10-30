@@ -18,6 +18,7 @@ const overlay = required('#overlay');
 const message = required('#message');
 const action = required<HTMLButtonElement>('#action');
 const debugToggle = required<HTMLInputElement>('#debug');
+const terrainToggle = required<HTMLInputElement>('#terrain');
 const state = createGame();
 const keys = new Set<string>();
 const controls = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
@@ -32,6 +33,7 @@ function continueGame() {
   keys.clear();
   action.blur();
   debugToggle.blur();
+  terrainToggle.blur();
   previousTime = undefined;
 }
 function pause() {
@@ -70,7 +72,6 @@ function tick(time: number) {
   if (disposed) return;
   const dt = previousTime === undefined ? 0 : Math.min((time - previousTime) / 1000, 0.05);
   previousTime = time;
-  const running = state.status === 'playing';
   updateGame(state, {
     x: Number(keys.has('ArrowRight') || keys.has('KeyD')) - Number(keys.has('ArrowLeft') || keys.has('KeyA')),
     y: Number(keys.has('ArrowUp') || keys.has('KeyW')) - Number(keys.has('ArrowDown') || keys.has('KeyS')),
@@ -85,7 +86,7 @@ function tick(time: number) {
   action.textContent = finished ? 'Nová hra · Enter' : 'Pokračovat · Enter';
   progress.value = Math.min(1, state.time / LEVEL_DURATION);
   section.textContent = state.status === 'victory' ? 'Hotovo · Úroveň 1' : levelPart(state.time);
-  view.render(state, running ? dt : 0, debugToggle.checked);
+  view.render(state, debugToggle.checked, terrainToggle.checked);
   frame = requestAnimationFrame(tick);
 }
 if (!document.hasFocus() || document.hidden) pause();

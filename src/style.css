@@ -38,3 +38,4 @@ button:focus-visible, input:focus-visible { outline: 3px solid #fbbf24; outline-
 progress { width: min(18rem, 70vw); height: 0.4rem; accent-color: #38bdf8; }
 #section { color: #bae6fd; }
 #result { color: #cbd5e1; }
+.terrain-toggle { position: fixed; bottom: 3rem; left: 1rem; font-size: 0.85rem; color: #a3b4cc; }

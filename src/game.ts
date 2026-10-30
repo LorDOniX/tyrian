@@ -1,6 +1,6 @@
 import { circlesOverlap, sweepHit } from './collision.ts';
 import type { MovingCircle } from './collision.ts';
-import { LEVEL_DURATION, LEVEL_EVENTS } from './level.ts';
+import { LEVEL_DURATION, LEVEL_EVENTS, GROUND_TARGETS } from './level.ts';
 import type { EnemyKind } from './level.ts';
 
 export const WORLD_WIDTH = 18;
@@ -10,23 +10,29 @@ export type Enemy = Body & {
   kind: EnemyKind; hp: number; phase: 'entering' | 'charging' | 'leaving';
   shotLeft: number; shots: number; hitLeft: number;
 };
+export const SCROLL_SPEED = 4;
+export const TURRET_EXTENT = 1.2;
+export type GroundTarget = Body & {
+  kind: 'turret'; levelY: number; hp: number; shotLeft: number; hitLeft: number;
+};
+export type Wreck = { id: number; x: number; levelY: number; y: number };
 export type Bullet = Body & { owner: 'player' | 'enemy'; vx: number; vy: number };
 export type Input = { x: number; y: number; fire: boolean };
 export type Effect = { id: number; x: number; y: number; age: number };
 export type GameState = {
   status: 'playing' | 'paused' | 'gameOver' | 'victory';
-  score: number; lives: number; time: number;
+  score: number; lives: number; time: number; scrollDistance: number; nextGround: number;
   nextEvent: number; invulnerabilityLeft: number; cooldown: number;
   nextId: number; tilt: number;
-  player: Body; enemies: Enemy[]; bullets: Bullet[]; effects: Effect[];
+  player: Body; groundTargets: GroundTarget[]; wrecks: Wreck[]; enemies: Enemy[]; bullets: Bullet[]; effects: Effect[];
 };
 
 export function createGame(): GameState {
   return {
-    status: 'playing', score: 0, lives: 3, time: 0,
+    status: 'playing', score: 0, lives: 3, time: 0, scrollDistance: 0, nextGround: 0,
     nextEvent: 0, invulnerabilityLeft: 0, cooldown: 0, nextId: 1, tilt: 0,
     player: { id: 0, x: 0, y: -7, previousX: 0, previousY: -7, radius: 0.45, speed: 9 },
-    enemies: [], bullets: [], effects: [],
+    groundTargets: [], wrecks: [], enemies: [], bullets: [], effects: [],
   };
 }
 export function restartGame(state: GameState): void { Object.assign(state, createGame()); }
@@ -51,6 +57,30 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   const dt = Math.max(0, Math.min(elapsed, 0.05));
   if (dt === 0) return;
   state.time += dt;
+  const previousDistance = state.scrollDistance;
+  state.scrollDistance += SCROLL_SPEED * dt;
+  while (state.nextGround < GROUND_TARGETS.length &&
+    GROUND_TARGETS[state.nextGround]!.levelY - state.scrollDistance <= 13) {
+    const target = GROUND_TARGETS[state.nextGround++]!;
+    state.groundTargets.push({ id: state.nextId++, kind: 'turret', x: target.x,
+      levelY: target.levelY, y: target.levelY - previousDistance,
+      previousX: target.x, previousY: target.levelY - previousDistance,
+      radius: 0.7, speed: SCROLL_SPEED, hp: 2, shotLeft: 1.5, hitLeft: 0 });
+  }
+  const pendingGround: GroundTarget[] = [];
+  for (const target of state.groundTargets) {
+    remember(target);
+    target.y = target.levelY - state.scrollDistance;
+    target.hitLeft = Math.max(0, target.hitLeft - dt);
+    if (target.y + TURRET_EXTENT <= 12 && target.y - TURRET_EXTENT >= -12) {
+      target.shotLeft -= dt;
+      if (target.shotLeft <= 0) pendingGround.push(target);
+    }
+  }
+  state.wrecks = state.wrecks.filter(wreck => {
+    wreck.y = wreck.levelY - state.scrollDistance;
+    return wreck.y >= -13;
+  });
   state.effects = state.effects.filter(effect => (effect.age += dt) < 0.35);
   state.invulnerabilityLeft = Math.max(0, state.invulnerabilityLeft - dt);
   state.cooldown = Math.max(0, state.cooldown - dt);
@@ -93,10 +123,10 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   const deadEnemies = new Set<number>();
   const deadBullets = new Set<number>();
-  const hits: { time: number; bullet: Bullet; enemy: Enemy }[] = [];
+  const hits: { time: number; bullet: Bullet; enemy: Enemy | GroundTarget }[] = [];
   for (const bullet of state.bullets) {
     if (bullet.owner !== 'player') continue;
-    for (const enemy of state.enemies) {
+    for (const enemy of [...state.enemies, ...state.groundTargets]) {
       const time = sweepHit(bullet, enemy);
       if (time !== null) hits.push({ time, bullet, enemy });
     }
@@ -110,7 +140,8 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     enemy.hitLeft = 0.12;
     if (enemy.hp > 0) continue;
     deadEnemies.add(enemy.id);
-    state.score += enemy.kind === 'gunner' ? 250 : 100;
+    if (enemy.kind === 'turret') state.wrecks.push({ id: enemy.id, x: enemy.x, levelY: enemy.levelY, y: enemy.y });
+    state.score += enemy.kind === 'turret' ? 200 : enemy.kind === 'gunner' ? 250 : 100;
     explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
       enemy.previousY + (enemy.y - enemy.previousY) * time);
   }
@@ -132,6 +163,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       explode(enemy.x, enemy.y);
     }
   }
+  state.groundTargets = state.groundTargets.filter(target => !deadEnemies.has(target.id) && target.y + TURRET_EXTENT >= -12);
   state.enemies = state.enemies.filter(enemy => !deadEnemies.has(enemy.id) && enemy.y + enemy.radius >= -12);
   state.bullets = state.bullets.filter(bullet => !deadBullets.has(bullet.id) &&
     Math.abs(bullet.x) <= WORLD_WIDTH / 2 + 1 && Math.abs(bullet.y) <= WORLD_HEIGHT / 2 + 1);
@@ -145,7 +177,17 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     enemy.shotLeft = 0.8;
     if (enemy.shots === 3) enemy.phase = 'leaving';
   }
+  for (const target of pendingGround) {
+    if (deadEnemies.has(target.id) || state.lives === 0) continue;
+    const { vx, vy } = aimVelocity(target, player, 6);
+    // Ústí hlavně je 1,05 jednotky od středu. Zblízka nepřeskočíme hráče.
+    const muzzleOffset = Math.min(1.05, Math.hypot(player.x - target.x, player.y - target.y));
+    state.bullets.push(makeBullet(state, target.x + vx / 6 * muzzleOffset,
+      target.y + vy / 6 * muzzleOffset, 'enemy', vx, vy));
+    target.shotLeft = 1.5;
+  }
   if (state.lives === 0) state.status = 'gameOver';
   else if (state.time >= LEVEL_DURATION && state.nextEvent === LEVEL_EVENTS.length &&
-    state.enemies.length === 0 && !state.bullets.some(bullet => bullet.owner === 'enemy')) state.status = 'victory';
+    state.enemies.length === 0 && state.nextGround === GROUND_TARGETS.length &&
+    state.groundTargets.length === 0 && !state.bullets.some(bullet => bullet.owner === 'enemy')) state.status = 'victory';
 }
