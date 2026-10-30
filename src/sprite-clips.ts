@@ -15,6 +15,10 @@ export const SPRITE_CLIPS = {
     frames: row(weapons, 13, [17]) },
   enemyShot: { start: 19, fps: 10, loop: true, size: 0.85, width: 1,
     frames: row(weapons, 8, [15, 16]) },
+  spreadPickup: { start: 26, fps: 8, loop: true, size: 1.8, width: 1,
+    frames: row('tyrian.shp.01673F.png', 0, [12, 13, 14]) },
+  repairPickup: { start: 29, fps: 8, loop: true, size: 1.8, width: 1,
+    frames: row('tyrian.shp.01673F.png', 1, [12, 13, 14]) },
   shield: { start: 21, fps: 30, loop: false, size: 1.2, width: 1,
     frames: row(weapons, 11, [15, 16, 17, 16, 15]) },
 } as const;

@@ -77,6 +77,11 @@ export async function createScene(container: HTMLElement) {
   const enemyMaterial = new THREE.MeshStandardMaterial({ color: '#fb4563', metalness: 0.3, roughness: 0.4 });
   const debugGeometry = new THREE.RingGeometry(0.97, 1, 32);
   const debugMaterial = new THREE.MeshBasicMaterial({ color: '#a3ff8f', depthTest: false, depthWrite: false, transparent: true });
+  const pickupModels = new Map<number, THREE.Object3D>();
+  const markerGeometry = new THREE.PlaneGeometry(1, 1);
+  const markerMaterial = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, depthTest: false, depthWrite: false });
+  const spreadHalo = new THREE.MeshBasicMaterial({ color: '#fbbf24', transparent: true, depthTest: false, depthWrite: false });
+  const repairHalo = new THREE.MeshBasicMaterial({ color: '#86efac', transparent: true, depthTest: false, depthWrite: false });
   const bulletModels = new Map<number, THREE.Object3D>();
   const turretBaseGeometry = new THREE.CylinderGeometry(0.7, 0.95, 0.5, 8);
   turretBaseGeometry.rotateX(Math.PI / 2);
@@ -119,7 +124,7 @@ export async function createScene(container: HTMLElement) {
   let lastTime = 0;
   function render(state: GameState, debug: boolean, showTerrain: boolean) {
     if (state.time < lastTime) {
-      for (const models of [bulletModels, enemyModels, groundModels, wreckModels, effectModels, debugModels]) {
+      for (const models of [bulletModels, enemyModels, groundModels, wreckModels, effectModels, pickupModels, debugModels]) {
         models.forEach(model => scene.remove(model));
         models.clear();
       }
@@ -151,6 +156,12 @@ export async function createScene(container: HTMLElement) {
         muzzle.name = 'muzzle';
         muzzle.position.set(0, -0.65, 0.3);
         model.add(muzzle);
+      }
+      if (enemy.drop) {
+        const halo = new THREE.Mesh(debugGeometry, enemy.drop === 'spread' ? spreadHalo : repairHalo);
+        halo.scale.setScalar(1.05);
+        halo.renderOrder = 5;
+        model.add(halo);
       }
       return model;
     }, (model, enemy) => {
@@ -196,6 +207,37 @@ export async function createScene(container: HTMLElement) {
       model.rotation.z = 0.3;
       return model;
     }, (model, wreck) => { model.position.set(wreck.x, wreck.y, -4); });
+    sync(state.pickups, pickupModels, pickup => {
+      const model = new THREE.Group();
+      const icon = sprites.create(pickup.kind === 'spread' ? 'spreadPickup' : 'repairPickup');
+      icon.name = 'icon';
+      icon.renderOrder = 16;
+      model.add(icon);
+      if (pickup.kind === 'repair') {
+        for (const [width, height] of [[0.48, 0.12], [0.12, 0.48]]) {
+          const bar = new THREE.Mesh(markerGeometry, markerMaterial);
+          bar.scale.set(width!, height!, 1);
+          bar.position.z = 0.1;
+          bar.renderOrder = 17;
+          model.add(bar);
+        }
+      } else {
+        for (const angle of [-0.4, 0, 0.4]) {
+          const bar = new THREE.Mesh(markerGeometry, markerMaterial);
+          bar.scale.set(0.08, 0.42, 1);
+          bar.position.set(angle * 0.55, -0.05, 0.1);
+          bar.rotation.z = -angle;
+          bar.renderOrder = 17;
+          model.add(bar);
+        }
+      }
+      return model;
+    }, (model, pickup) => {
+      const icon = model.getObjectByName('icon')!;
+      sprites.animate(icon, pickup.kind === 'spread' ? 'spreadPickup' : 'repairPickup', state.time);
+      model.position.set(pickup.x, pickup.y, 1.8);
+      model.scale.setScalar(1 + Math.sin(state.time * 6) * 0.06);
+    });
     sync(state.effects, effectModels, effect => sprites.create(effect.kind), (model, effect) => {
       sprites.animate(model, effect.kind, effect.age, effect.scale);
       model.position.set(effect.x, effect.y, 1.5);
@@ -203,7 +245,7 @@ export async function createScene(container: HTMLElement) {
     });
     const bossDebug = state.boss && state.boss.mode !== 'destroyed'
       ? bossCircles(state.boss).map((circle, index) => ({ ...circle, id: -100 - index })) : [];
-    sync(debug ? [state.player, ...state.enemies, ...state.groundTargets, ...state.bullets, ...bossDebug] : [], debugModels,
+    sync(debug ? [state.player, ...state.enemies, ...state.groundTargets, ...state.bullets, ...state.pickups, ...bossDebug] : [], debugModels,
       () => new THREE.Mesh(debugGeometry, debugMaterial), (model, body) => {
         model.position.set(body.x, body.y, 2);
         model.scale.setScalar(body.radius);
@@ -227,17 +269,17 @@ export async function createScene(container: HTMLElement) {
     terrain.dispose();
     bossModel.dispose();
     // Sprity vlastní svůj sdílený materiál, geometrii a texturu.
-    for (const models of [bulletModels, effectModels]) {
+    for (const models of [bulletModels, effectModels, pickupModels]) {
       models.forEach(model => scene.remove(model));
       models.clear();
     }
     sprites.dispose();
     // Evidence zahrnuje i sdílené prostředky modelů odstraněných během hry.
     const geometries = new Set<THREE.BufferGeometry>([
-      enemyGeometry, debugGeometry, coreGeometry, muzzleGeometry, turretBaseGeometry, turretHeadGeometry,
+      markerGeometry, enemyGeometry, debugGeometry, coreGeometry, muzzleGeometry, turretBaseGeometry, turretHeadGeometry,
     ]);
     const materials = new Set<THREE.Material>([
-      enemyMaterial, debugMaterial, gunnerMaterial, chargingMaterial, turretMaterial, wreckMaterial,
+      markerMaterial, spreadHalo, repairHalo, enemyMaterial, debugMaterial, gunnerMaterial, chargingMaterial, turretMaterial, wreckMaterial,
     ]);
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh || object instanceof THREE.Points) {
@@ -250,7 +292,7 @@ export async function createScene(container: HTMLElement) {
     materials.forEach((material) => material.dispose());
     renderer.dispose();
     renderer.domElement.remove();
-    [bulletModels, enemyModels, groundModels, wreckModels, effectModels, debugModels].forEach(models => models.clear());
+    [bulletModels, enemyModels, groundModels, wreckModels, effectModels, pickupModels, debugModels].forEach(models => models.clear());
   }
   return { render, dispose };
 }

@@ -1,5 +1,6 @@
+import type { PickupKind } from './bonuses.ts';
 export type EnemyKind = 'scout' | 'gunner';
-export type SpawnEvent = Readonly<{ at: number; kind: EnemyKind; x: number; y: number }>;
+export type SpawnEvent = Readonly<{ at: number; kind: EnemyKind; x: number; y: number; drop?: PickupKind }>;
 export const LEVEL_DURATION = 55;
 
 // Časy a formace jsou data; restart přehrává stejnou úroveň.
@@ -18,7 +19,12 @@ for (const at of [36, 43, 50]) {
     { at: at + 2, kind: 'gunner', x: 3, y: 13 });
 }
 export const LEVEL_EVENTS: readonly SpawnEvent[] = Object.freeze(
-  events.sort((a, b) => a.at - b.at).map(event => Object.freeze(event)),
+  events.sort((a, b) => a.at - b.at).map(event => {
+    const drop: PickupKind | undefined =
+      (event.at === 1 && event.x === 0) || (event.at === 23 && event.x === -5) || (event.at === 50 && event.x === 0)
+        ? 'spread' : (event.at === 8 && event.x === -2) || (event.at === 36 && event.x === 0) ? 'repair' : undefined;
+    return Object.freeze({ ...event, drop });
+  }),
 );
 
 export function levelPart(time: number): string {

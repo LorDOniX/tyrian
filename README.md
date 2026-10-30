@@ -6,7 +6,8 @@ Základ vykreslování vysvětluje [faze1.md](faze1.md), nepřátele a herní pr
 střelami a vítězství. [Fáze 4](faze4.md) přidává posouvající se 3D terén,
 pozemní věže, trosky a stín lodi. [Fáze 5](faze5.md) zakončuje misi bossem
 se dvěma fázemi, mířenou salvou a vějířem střel. [Fáze 6](faze6.md) používá
-sprite exploze, zásahy a projektily z přidaných Tyrian assetů. Zachovává 3 životy, skóre, pauzu a restart.
+sprite exploze, zásahy a projektily z přidaných Tyrian assetů. [Fáze 7](faze7.md)
+přidává sbíratelnou opravu a dočasnou trojstřelu. Zachovává 3 životy, skóre, pauzu a restart.
 
 ## Spuštění
 
@@ -40,6 +41,7 @@ Produkční hra vždy začíná vlnami; restart po výsledku také vrací začá
 - `src/boss.ts` – pravidla souboje a útoků.
 - `src/boss-model.ts` – 3D model a vizuální signalizace.
 - `src/start-mode.ts` – omezení vývojového vstupu do souboje.
+- `src/bonuses.ts` – bonusy, opravy a dočasná trojstřela.
 - `src/game.ts` – herní stav a pravidla bez Three.js.
 - `src/collision.ts` – kolizní výpočty ve 2D.
 - `src/terrain.ts` – opakované segmenty a stylizovaný stín.

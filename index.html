@@ -9,10 +9,14 @@
   <body>
     <main id="app" aria-label="Vesmírná loď – ovládání šipkami nebo WASD a střelba mezerníkem"></main>
     <aside class="info">
-      <h1>Fáze 6 · Palba</h1>
+      <h1>Fáze 7 · Výzbroj</h1>
       <p class="stats">Skóre <strong id="score">000000</strong> · Životy <strong id="lives">3</strong></p>
       <p id="section">1 / 3 · Formace</p>
       <progress id="progress" max="1" value="0" aria-label="Průběh úrovně"></progress>
+      <p id="weapon-label">Zbraň · Jeden paprsek</p>
+      <progress id="weapon-timer" max="12" value="0" hidden aria-label="Zbývající čas trojstřely"></progress>
+      <p class="bonus-help"><span>◆ Trojstřela</span> · <span>+ Oprava</span></p>
+      <p id="bonus-notice" role="status" aria-live="polite"></p>
       <p>WASD / šipky: pohyb · Mezerník: střelba · Esc: pauza</p>
     </aside>
     <aside id="boss-hud" class="boss-hud" hidden>

@@ -1,3 +1,5 @@
+import { createPickup, updateBonuses, playerVolley, MAX_LIVES } from './bonuses.ts';
+import type { BonusState, PickupKind } from './bonuses.ts';
 import { clipDuration } from './sprite-clips.ts';
 import type { EffectKind } from './sprite-clips.ts';
 import { createBoss, updateBoss, bossCircles } from './boss.ts';
@@ -11,7 +13,7 @@ export const WORLD_WIDTH = 18;
 export const WORLD_HEIGHT = 24;
 export type Body = MovingCircle & { id: number; speed: number };
 export type Enemy = Body & {
-  kind: EnemyKind; hp: number; phase: 'entering' | 'charging' | 'leaving';
+  drop?: PickupKind; kind: EnemyKind; hp: number; phase: 'entering' | 'charging' | 'leaving';
   shotLeft: number; shots: number; hitLeft: number;
 };
 export const SCROLL_SPEED = 4;
@@ -23,7 +25,7 @@ export type Wreck = { id: number; x: number; levelY: number; y: number };
 export type Bullet = Body & { owner: 'player' | 'enemy'; vx: number; vy: number };
 export type Input = { x: number; y: number; fire: boolean };
 export type Effect = { id: number; x: number; y: number; age: number; kind: EffectKind; scale: number };
-export type GameState = {
+export type GameState = BonusState & {
   missionStage: 'waves' | 'warning' | 'boss' | 'bossDestroyed';
   stageTimer: number; boss: Boss | null;
   status: 'playing' | 'paused' | 'gameOver' | 'victory';
@@ -36,7 +38,8 @@ export type GameState = {
 export function createGame(startAtBoss = false): GameState {
   return {
     missionStage: startAtBoss ? 'warning' : 'waves', stageTimer: startAtBoss ? 1.5 : 0, boss: null,
-    status: 'playing', score: 0, lives: 3, time: startAtBoss ? LEVEL_DURATION : 0,
+    status: 'playing', score: 0, lives: MAX_LIVES,
+    pickups: [], weaponLeft: 0, bonusNotice: null, noticeLeft: 0, time: startAtBoss ? LEVEL_DURATION : 0,
     scrollDistance: startAtBoss ? LEVEL_DURATION * SCROLL_SPEED : 0, nextGround: startAtBoss ? GROUND_TARGETS.length : 0,
     nextEvent: startAtBoss ? LEVEL_EVENTS.length : 0, invulnerabilityLeft: 0, cooldown: 0, nextId: 1, tilt: 0,
     player: { id: 0, x: 0, y: -7, previousX: 0, previousY: -7, radius: 0.45, speed: 9 },
@@ -120,16 +123,21 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     if (state.stageTimer === 0) state.status = 'victory';
     return;
   }
+  for (const pickup of updateBonuses(state, dt)) {
+    state.effects.push({ id: state.nextId++, kind: 'shield', x: pickup.x, y: pickup.y, age: 0, scale: 1.5 });
+  }
   const pendingBossShots = state.boss ? updateBoss(state.boss, dt, player) : [];
   if (input.fire && state.cooldown === 0) {
-    state.bullets.push(makeBullet(state, player.x, player.y + 1.1, 'player', 0, 22));
+    for (const shot of playerVolley(state.weaponLeft > 0)) {
+      state.bullets.push(makeBullet(state, player.x + shot.offsetX, player.y + 1.1, 'player', shot.vx, shot.vy));
+    }
     state.cooldown = 0.14;
   }
   while (state.nextEvent < LEVEL_EVENTS.length && LEVEL_EVENTS[state.nextEvent]!.at <= state.time) {
     const event = LEVEL_EVENTS[state.nextEvent++]!;
     state.enemies.push({ id: state.nextId++, x: event.x, y: event.y,
       previousX: event.x, previousY: event.y, radius: event.kind === 'gunner' ? 0.75 : 0.6,
-      kind: event.kind, hp: event.kind === 'gunner' ? 2 : 1, speed: 4,
+      kind: event.kind, drop: event.drop, hp: event.kind === 'gunner' ? 2 : 1, speed: 4,
       phase: 'entering', shotLeft: 0.8, shots: 0, hitLeft: 0 });
   }
   const pendingShots: Enemy[] = [];
@@ -191,10 +199,14 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       continue;
     }
     deadEnemies.add(enemy.id);
+    if ((enemy.kind === 'scout' || enemy.kind === 'gunner') && enemy.drop) {
+      state.pickups.push(createPickup(state.nextId++, enemy.drop, enemy.x, enemy.y));
+    }
     if (enemy.kind === 'boss') {
       enemy.hp = 0;
       enemy.mode = 'destroyed';
       state.missionStage = 'bossDestroyed';
+      state.pickups = [];
       state.stageTimer = 1;
       state.bullets = state.bullets.filter(bullet => bullet.owner === 'player');
     }

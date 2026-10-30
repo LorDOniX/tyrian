@@ -46,3 +46,8 @@ progress { width: min(18rem, 70vw); height: 0.4rem; accent-color: #38bdf8; }
   .boss-hud { top: auto; bottom: 1rem; }
   .boss-hud progress { width: 10rem; }
 }
+#weapon-label { color: #fcd34d; }
+#weapon-timer { accent-color: #fbbf24; }
+#bonus-notice { color: #ffffff; min-height: 1.1em; }
+.bonus-help span:first-child { color: #fbbf24; }
+.bonus-help span:last-child { color: #86efac; }
