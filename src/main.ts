@@ -1,3 +1,4 @@
+import { startAtBoss } from './start-mode.ts';
 import './style.css';
 import { LEVEL_DURATION, levelPart } from './level.ts';
 import { createScene } from './scene';
@@ -19,7 +20,10 @@ const message = required('#message');
 const action = required<HTMLButtonElement>('#action');
 const debugToggle = required<HTMLInputElement>('#debug');
 const terrainToggle = required<HTMLInputElement>('#terrain');
-const state = createGame();
+const bossHud = required('#boss-hud');
+const bossHealth = required<HTMLProgressElement>('#boss-health');
+const bossLabel = required('#boss-label');
+const state = createGame(startAtBoss(import.meta.env.DEV, import.meta.env.MODE));
 const keys = new Set<string>();
 const controls = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
 let previousTime: number | undefined;
@@ -85,7 +89,16 @@ function tick(time: number) {
   result.textContent = finished ? `${state.score} bodů · Zbývající životy: ${state.lives}` : 'Hra čeká na pokračování.';
   action.textContent = finished ? 'Nová hra · Enter' : 'Pokračovat · Enter';
   progress.value = Math.min(1, state.time / LEVEL_DURATION);
-  section.textContent = state.status === 'victory' ? 'Hotovo · Úroveň 1' : levelPart(state.time);
+  section.textContent = state.status === 'victory' ? 'Hotovo · Úroveň 1'
+    : state.missionStage === 'warning' ? 'Varování · Blíží se velitel'
+    : state.missionStage === 'bossDestroyed' ? 'Cíl zničen'
+    : state.missionStage === 'boss' ? (state.boss?.mode === 'entering' ? 'Boss · Přílet pod štítem'
+      : state.boss?.mode === 'transitioning' ? 'Boss · Fáze 2' : `Boss · Fáze ${state.boss?.phase ?? 1}`)
+    : levelPart(state.time);
+  bossHud.hidden = !state.boss || state.boss.mode === 'entering' || state.boss.mode === 'destroyed';
+  bossHealth.max = state.boss?.maxHp ?? 60;
+  bossHealth.value = Math.max(0, state.boss?.hp ?? 0);
+  bossLabel.textContent = `Velitel · ${Math.max(0, state.boss?.hp ?? 0)} / ${state.boss?.maxHp ?? 60}`;
   view.render(state, debugToggle.checked, terrainToggle.checked);
   frame = requestAnimationFrame(tick);
 }

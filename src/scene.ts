@@ -1,3 +1,5 @@
+import { bossCircles } from './boss.ts';
+import { createBossModel } from './boss-model.ts';
 import * as THREE from 'three';
 import { createTerrain } from './terrain.ts';
 
@@ -23,6 +25,7 @@ export function createScene(container: HTMLElement) {
   scene.add(light);
 
   const terrain = createTerrain(scene);
+  const bossModel = createBossModel(scene);
 
   // Skutečné 3D objemy, sestavené do jedné lodi.
   const ship = new THREE.Group();
@@ -207,11 +210,14 @@ export function createScene(container: HTMLElement) {
       model.position.set(effect.x, effect.y, 1);
       model.scale.setScalar(0.1 + effect.age * 4);
     });
-    sync(debug ? [state.player, ...state.enemies, ...state.groundTargets, ...state.bullets] : [], debugModels,
+    const bossDebug = state.boss && state.boss.mode !== 'destroyed'
+      ? bossCircles(state.boss).map((circle, index) => ({ ...circle, id: -100 - index })) : [];
+    sync(debug ? [state.player, ...state.enemies, ...state.groundTargets, ...state.bullets, ...bossDebug] : [], debugModels,
       () => new THREE.Mesh(debugGeometry, debugMaterial), (model, body) => {
         model.position.set(body.x, body.y, 2);
         model.scale.setScalar(body.radius);
       });
+    bossModel.render(state.boss, state.time, state.stageTimer);
     terrain.render(state.scrollDistance, state.player.x, state.player.y, showTerrain, ship.visible);
     for (const { stars, positions, original, speed } of starLayers) {
       stars.visible = !showTerrain;
@@ -227,6 +233,7 @@ export function createScene(container: HTMLElement) {
   function dispose() {
     observer.disconnect();
     terrain.dispose();
+    bossModel.dispose();
     // Evidence zahrnuje i sdílené prostředky modelů odstraněných během hry.
     const geometries = new Set<THREE.BufferGeometry>([
       bulletGeometry, enemyGeometry, effectGeometry, debugGeometry, hostileGeometry, coreGeometry, muzzleGeometry, turretBaseGeometry, turretHeadGeometry,

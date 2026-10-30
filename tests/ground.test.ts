@@ -112,7 +112,7 @@ test('nearest target wins across air and ground lists', () => {
   assert.equal(state.enemies.length, 1);
   assert.equal(state.groundTargets.length, 0);
 });
-test('victory waits for ground events and live targets but ignores wrecks', () => {
+test('boss warning waits for ground events and live targets but ignores wrecks', () => {
   const state = stateOnly();
   state.time = 55;
   state.nextGround = 0;
@@ -125,7 +125,7 @@ test('victory waits for ground events and live targets but ignores wrecks', () =
   state.groundTargets = [];
   state.wrecks = [{ id: 100, x: 0, y: 5, levelY: state.scrollDistance + 5 }];
   step(state);
-  assert.equal(state.status, 'victory');
+  assert.equal(state.missionStage, 'warning');
   restartGame(state);
   assert.deepEqual(state, createGame());
 });

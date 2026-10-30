@@ -39,3 +39,10 @@ progress { width: min(18rem, 70vw); height: 0.4rem; accent-color: #38bdf8; }
 #section { color: #bae6fd; }
 #result { color: #cbd5e1; }
 .terrain-toggle { position: fixed; bottom: 3rem; left: 1rem; font-size: 0.85rem; color: #a3b4cc; }
+.boss-hud { position: fixed; top: 1rem; right: 1rem; text-align: right; pointer-events: none; }
+.boss-hud p { margin: 0 0 0.4rem; color: #fda4af; font-variant-numeric: tabular-nums; }
+.boss-hud progress { accent-color: #fb7185; }
+@media (max-width: 700px) {
+  .boss-hud { top: auto; bottom: 1rem; }
+  .boss-hud progress { width: 10rem; }
+}

@@ -1,3 +1,5 @@
+import { createBoss, updateBoss, bossCircles } from './boss.ts';
+import type { Boss } from './boss.ts';
 import { circlesOverlap, sweepHit } from './collision.ts';
 import type { MovingCircle } from './collision.ts';
 import { LEVEL_DURATION, LEVEL_EVENTS, GROUND_TARGETS } from './level.ts';
@@ -20,6 +22,8 @@ export type Bullet = Body & { owner: 'player' | 'enemy'; vx: number; vy: number 
 export type Input = { x: number; y: number; fire: boolean };
 export type Effect = { id: number; x: number; y: number; age: number };
 export type GameState = {
+  missionStage: 'waves' | 'warning' | 'boss' | 'bossDestroyed';
+  stageTimer: number; boss: Boss | null;
   status: 'playing' | 'paused' | 'gameOver' | 'victory';
   score: number; lives: number; time: number; scrollDistance: number; nextGround: number;
   nextEvent: number; invulnerabilityLeft: number; cooldown: number;
@@ -27,10 +31,12 @@ export type GameState = {
   player: Body; groundTargets: GroundTarget[]; wrecks: Wreck[]; enemies: Enemy[]; bullets: Bullet[]; effects: Effect[];
 };
 
-export function createGame(): GameState {
+export function createGame(startAtBoss = false): GameState {
   return {
-    status: 'playing', score: 0, lives: 3, time: 0, scrollDistance: 0, nextGround: 0,
-    nextEvent: 0, invulnerabilityLeft: 0, cooldown: 0, nextId: 1, tilt: 0,
+    missionStage: startAtBoss ? 'warning' : 'waves', stageTimer: startAtBoss ? 1.5 : 0, boss: null,
+    status: 'playing', score: 0, lives: 3, time: startAtBoss ? LEVEL_DURATION : 0,
+    scrollDistance: startAtBoss ? LEVEL_DURATION * SCROLL_SPEED : 0, nextGround: startAtBoss ? GROUND_TARGETS.length : 0,
+    nextEvent: startAtBoss ? LEVEL_EVENTS.length : 0, invulnerabilityLeft: 0, cooldown: 0, nextId: 1, tilt: 0,
     player: { id: 0, x: 0, y: -7, previousX: 0, previousY: -7, radius: 0.45, speed: 9 },
     groundTargets: [], wrecks: [], enemies: [], bullets: [], effects: [],
   };
@@ -54,9 +60,17 @@ function makeBullet(state: GameState, x: number, y: number, owner: Bullet['owner
 
 export function updateGame(state: GameState, input: Input, elapsed: number): void {
   if (state.status !== 'playing') return;
+  if (state.lives <= 0) { state.status = 'gameOver'; return; }
   const dt = Math.max(0, Math.min(elapsed, 0.05));
   if (dt === 0) return;
   state.time += dt;
+  if (state.missionStage === 'warning') {
+    state.stageTimer -= dt;
+    if (state.stageTimer <= 0) {
+      state.missionStage = 'boss';
+      state.boss = createBoss(state.nextId++);
+    }
+  }
   const previousDistance = state.scrollDistance;
   state.scrollDistance += SCROLL_SPEED * dt;
   while (state.nextGround < GROUND_TARGETS.length &&
@@ -92,6 +106,17 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   player.x = Math.max(-8, Math.min(8, player.x + x * player.speed * dt));
   player.y = Math.max(-10.5, Math.min(10.5, player.y + y * player.speed * dt));
   state.tilt += (-x * 0.35 - state.tilt) * (1 - Math.exp(-10 * dt));
+  if (state.missionStage === 'bossDestroyed') {
+    const previous = state.stageTimer;
+    state.stageTimer = Math.max(0, previous - dt);
+    if (Math.floor(previous / 0.15) !== Math.floor(state.stageTimer / 0.15) && state.boss) {
+      const offset = Math.floor(previous / 0.15) % 3 - 1;
+      state.effects.push({ id: state.nextId++, x: state.boss.x + offset * 1.5, y: state.boss.y + offset * 0.5, age: 0 });
+    }
+    if (state.stageTimer === 0) state.status = 'victory';
+    return;
+  }
+  const pendingBossShots = state.boss ? updateBoss(state.boss, dt, player) : [];
   if (input.fire && state.cooldown === 0) {
     state.bullets.push(makeBullet(state, player.x, player.y + 1.1, 'player', 0, 22));
     state.cooldown = 0.14;
@@ -123,7 +148,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   const deadEnemies = new Set<number>();
   const deadBullets = new Set<number>();
-  const hits: { time: number; bullet: Bullet; enemy: Enemy | GroundTarget }[] = [];
+  const hits: { time: number; bullet: Bullet; enemy: Enemy | GroundTarget | Boss }[] = [];
   for (const bullet of state.bullets) {
     if (bullet.owner !== 'player') continue;
     for (const enemy of [...state.enemies, ...state.groundTargets]) {
@@ -131,17 +156,33 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       if (time !== null) hits.push({ time, bullet, enemy });
     }
   }
+  if (state.boss && state.boss.mode !== 'destroyed') {
+    for (const bullet of state.bullets) {
+      if (bullet.owner !== 'player') continue;
+      const times = bossCircles(state.boss).map(circle => sweepHit(bullet, circle))
+        .filter((time): time is number => time !== null);
+      if (times.length) hits.push({ time: Math.min(...times), bullet, enemy: state.boss });
+    }
+  }
   const explode = (x: number, y: number) => state.effects.push({ id: state.nextId++, x, y, age: 0 });
   hits.sort((a, b) => a.time - b.time || a.bullet.id - b.bullet.id || a.enemy.id - b.enemy.id);
   for (const { bullet, enemy, time } of hits) {
     if (deadBullets.has(bullet.id) || deadEnemies.has(enemy.id)) continue;
     deadBullets.add(bullet.id);
+    if (enemy.kind === 'boss' && enemy.mode === 'entering') continue;
     enemy.hp--;
     enemy.hitLeft = 0.12;
     if (enemy.hp > 0) continue;
     deadEnemies.add(enemy.id);
+    if (enemy.kind === 'boss') {
+      enemy.hp = 0;
+      enemy.mode = 'destroyed';
+      state.missionStage = 'bossDestroyed';
+      state.stageTimer = 1;
+      state.bullets = state.bullets.filter(bullet => bullet.owner === 'player');
+    }
     if (enemy.kind === 'turret') state.wrecks.push({ id: enemy.id, x: enemy.x, levelY: enemy.levelY, y: enemy.y });
-    state.score += enemy.kind === 'turret' ? 200 : enemy.kind === 'gunner' ? 250 : 100;
+    state.score += enemy.kind === 'boss' ? 2000 : enemy.kind === 'turret' ? 200 : enemy.kind === 'gunner' ? 250 : 100;
     explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
       enemy.previousY + (enemy.y - enemy.previousY) * time);
   }
@@ -163,6 +204,8 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       explode(enemy.x, enemy.y);
     }
   }
+  if (state.boss && state.boss.mode !== 'entering' && state.boss.mode !== 'destroyed' &&
+    bossCircles(state.boss).some(circle => circlesOverlap(player, circle))) damagePlayer();
   state.groundTargets = state.groundTargets.filter(target => !deadEnemies.has(target.id) && target.y + TURRET_EXTENT >= -12);
   state.enemies = state.enemies.filter(enemy => !deadEnemies.has(enemy.id) && enemy.y + enemy.radius >= -12);
   state.bullets = state.bullets.filter(bullet => !deadBullets.has(bullet.id) &&
@@ -186,8 +229,14 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       target.y + vy / 6 * muzzleOffset, 'enemy', vx, vy));
     target.shotLeft = 1.5;
   }
+  if (state.boss?.mode !== 'destroyed' && state.lives > 0) {
+    for (const shot of pendingBossShots) state.bullets.push(makeBullet(state, shot.x, shot.y, 'enemy', shot.vx, shot.vy));
+  }
   if (state.lives === 0) state.status = 'gameOver';
-  else if (state.time >= LEVEL_DURATION && state.nextEvent === LEVEL_EVENTS.length &&
+  else if (state.missionStage === 'waves' && state.time >= LEVEL_DURATION && state.nextEvent === LEVEL_EVENTS.length &&
     state.enemies.length === 0 && state.nextGround === GROUND_TARGETS.length &&
-    state.groundTargets.length === 0 && !state.bullets.some(bullet => bullet.owner === 'enemy')) state.status = 'victory';
+    state.groundTargets.length === 0 && !state.bullets.some(bullet => bullet.owner === 'enemy')) {
+    state.missionStage = 'warning';
+    state.stageTimer = 1.5;
+  }
 }

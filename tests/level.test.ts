@@ -110,7 +110,7 @@ test('pause freezes charging and bullets', () => {
   step(state);
   assert.ok(state.enemies[0]!.shotLeft < 0.8);
 });
-test('victory waits for time, events and threats; player bullets do not block it', () => {
+test('boss warning waits for time, events and threats; player bullets do not block it', () => {
   const state = createGame();
   state.time = LEVEL_DURATION;
   step(state);
@@ -123,9 +123,9 @@ test('victory waits for time, events and threats; player bullets do not block it
   assert.equal(state.status, 'playing');
   state.bullets = [bullet(92, 4, 0)];
   step(state);
-  assert.equal(state.status, 'victory');
+  assert.equal(state.missionStage, 'warning');
   pauseGame(state);
-  assert.equal(state.status, 'victory');
+  assert.equal(state.missionStage, 'warning');
   restartGame(state);
   assert.deepEqual(state, createGame());
 });
@@ -139,13 +139,13 @@ test('defeat wins over completion, restart restores level cursor and hazards', (
   restartGame(state);
   assert.deepEqual(state, createGame());
 });
-test('whole level can end with no immortal enemies or projectiles', () => {
+test('all waves resolve and lead to boss warning without immortal threats', () => {
   const state = createGame();
   // Pro test konečnosti úrovně pouze ochráníme hráče, bez změny chování nepřátel.
   state.invulnerabilityLeft = 100;
   state.player.x = 8;
-  for (let i = 0; i < 1600 && state.status === 'playing'; i++) step(state);
-  assert.equal(state.status, 'victory');
+  for (let i = 0; i < 1600 && state.status === 'playing' && state.missionStage === 'waves'; i++) step(state);
+  assert.equal(state.missionStage, 'warning');
   assert.equal(state.nextEvent, LEVEL_EVENTS.length);
   assert.equal(state.enemies.length, 0);
   assert.ok(state.time < 75);

@@ -9,11 +9,15 @@
   <body>
     <main id="app" aria-label="Vesmírná loď – ovládání šipkami nebo WASD a střelba mezerníkem"></main>
     <aside class="info">
-      <h1>Fáze 4 · Nad základnou</h1>
+      <h1>Fáze 5 · Velitel</h1>
       <p class="stats">Skóre <strong id="score">000000</strong> · Životy <strong id="lives">3</strong></p>
       <p id="section">1 / 3 · Formace</p>
       <progress id="progress" max="1" value="0" aria-label="Průběh úrovně"></progress>
       <p>WASD / šipky: pohyb · Mezerník: střelba · Esc: pauza</p>
+    </aside>
+    <aside id="boss-hud" class="boss-hud" hidden>
+      <p id="boss-label">Velitel · 60 / 60</p>
+      <progress id="boss-health" max="60" value="60" aria-label="Životy bosse"></progress>
     </aside>
     <label class="terrain-toggle"><input id="terrain" type="checkbox" checked /> Terén</label>
     <label class="debug"><input id="debug" type="checkbox" /> Kolizní kruhy</label>
