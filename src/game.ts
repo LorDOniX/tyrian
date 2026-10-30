@@ -1,5 +1,8 @@
+import { createEnemy, updateEnemy, enemyVolley, ENEMY_TYPES } from './enemies.ts';
+import type { Enemy } from './enemies.ts';
+export type { Enemy } from './enemies.ts';
 import { createPickup, updateBonuses, playerVolley, MAX_LIVES } from './bonuses.ts';
-import type { BonusState, PickupKind } from './bonuses.ts';
+import type { BonusState } from './bonuses.ts';
 import { clipDuration } from './sprite-clips.ts';
 import type { EffectKind } from './sprite-clips.ts';
 import { createBoss, updateBoss, bossCircles } from './boss.ts';
@@ -7,15 +10,10 @@ import type { Boss } from './boss.ts';
 import { circlesOverlap, sweepHit } from './collision.ts';
 import type { MovingCircle } from './collision.ts';
 import { LEVEL_DURATION, LEVEL_EVENTS, GROUND_TARGETS } from './level.ts';
-import type { EnemyKind } from './level.ts';
 
 export const WORLD_WIDTH = 18;
 export const WORLD_HEIGHT = 24;
 export type Body = MovingCircle & { id: number; speed: number };
-export type Enemy = Body & {
-  drop?: PickupKind; kind: EnemyKind; hp: number; phase: 'entering' | 'charging' | 'leaving';
-  shotLeft: number; shots: number; hitLeft: number;
-};
 export const SCROLL_SPEED = 4;
 export const TURRET_EXTENT = 1.2;
 export type GroundTarget = Body & {
@@ -135,24 +133,9 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   while (state.nextEvent < LEVEL_EVENTS.length && LEVEL_EVENTS[state.nextEvent]!.at <= state.time) {
     const event = LEVEL_EVENTS[state.nextEvent++]!;
-    state.enemies.push({ id: state.nextId++, x: event.x, y: event.y,
-      previousX: event.x, previousY: event.y, radius: event.kind === 'gunner' ? 0.75 : 0.6,
-      kind: event.kind, drop: event.drop, hp: event.kind === 'gunner' ? 2 : 1, speed: 4,
-      phase: 'entering', shotLeft: 0.8, shots: 0, hitLeft: 0 });
+    state.enemies.push(createEnemy(state.nextId++, event.kind, event.x, event.y, event.drop));
   }
-  const pendingShots: Enemy[] = [];
-  for (const enemy of state.enemies) {
-    remember(enemy);
-    enemy.hitLeft = Math.max(0, enemy.hitLeft - dt);
-    if (enemy.kind === 'scout' || enemy.phase === 'leaving') enemy.y -= enemy.speed * dt;
-    else if (enemy.phase === 'entering') {
-      enemy.y = Math.max(7, enemy.y - enemy.speed * dt);
-      if (enemy.y === 7) enemy.phase = 'charging';
-    } else {
-      enemy.shotLeft -= dt;
-      if (enemy.shotLeft <= 0) pendingShots.push(enemy);
-    }
-  }
+  const pendingShots = state.enemies.filter(enemy => updateEnemy(enemy, dt));
   for (const bullet of state.bullets) {
     remember(bullet);
     bullet.x += bullet.vx * dt;
@@ -199,7 +182,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       continue;
     }
     deadEnemies.add(enemy.id);
-    if ((enemy.kind === 'scout' || enemy.kind === 'gunner') && enemy.drop) {
+    if (enemy.kind !== 'boss' && enemy.kind !== 'turret' && enemy.drop) {
       state.pickups.push(createPickup(state.nextId++, enemy.drop, enemy.x, enemy.y));
     }
     if (enemy.kind === 'boss') {
@@ -211,7 +194,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       state.bullets = state.bullets.filter(bullet => bullet.owner === 'player');
     }
     if (enemy.kind === 'turret') state.wrecks.push({ id: enemy.id, x: enemy.x, levelY: enemy.levelY, y: enemy.y });
-    state.score += enemy.kind === 'boss' ? 2000 : enemy.kind === 'turret' ? 200 : enemy.kind === 'gunner' ? 250 : 100;
+    state.score += enemy.kind === 'boss' ? 2000 : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
     explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
       enemy.previousY + (enemy.y - enemy.previousY) * time);
   }
@@ -249,12 +232,9 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   // Přeživší střelec vystřelí až po kolizích. Projektil se pohne příští krok.
   for (const enemy of pendingShots) {
     if (deadEnemies.has(enemy.id) || state.lives === 0) continue;
-    const muzzle = { x: enemy.x, y: enemy.y - 0.8 };
-    const { vx, vy } = aimVelocity(muzzle, player, 6);
-    state.bullets.push(makeBullet(state, muzzle.x, muzzle.y, 'enemy', vx, vy));
-    enemy.shots++;
-    enemy.shotLeft = 0.8;
-    if (enemy.shots === 3) enemy.phase = 'leaving';
+    for (const shot of enemyVolley(enemy, player)) {
+      state.bullets.push(makeBullet(state, shot.x, shot.y, 'enemy', shot.vx, shot.vy));
+    }
   }
   for (const target of pendingGround) {
     if (deadEnemies.has(target.id) || state.lives === 0) continue;

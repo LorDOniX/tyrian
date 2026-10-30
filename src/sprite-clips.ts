@@ -1,25 +1,34 @@
 // Výřezy zdrojů jsou v pixelech od levého horního rohu, indexované od nuly.
-// Zdrojová buňka 12 × 14 se ukládá doprostřed atlasové buňky 16 × 16.
-export const ATLAS = { width: 256, height: 32, cell: 16, columns: 16 } as const;
+// Efekty 12 × 14 i celé lodě 24 × 28 mají pevný střed v buňkách 32 × 32.
+export const ATLAS = { width: 512, height: 128, cell: 32, columns: 16 } as const;
 const fx = 'newsh6.shp.000000.png';
 const weapons = 'newsh(.shp.000000.png';
 const row = (source: string, y: number, columns: number[]) =>
   columns.map(x => ({ source, x: x * 12, y: y * 14, width: 12, height: 14 }));
 
+const shipFrames = (y: number) => [0, 48, 96].map(x => ({
+  source: 'newsh$.shp.000000.png', x, y, width: 24, height: 28,
+}));
+
 export const SPRITE_CLIPS = {
-  explosion: { start: 0, fps: 30, loop: false, size: 2.8, width: 1,
+  scoutShip: { start: 32, fps: 1, loop: true, size: 2, width: 1, referenceCell: 32, frames: shipFrames(0) },
+  gunnerShip: { start: 35, fps: 1, loop: true, size: 2.3, width: 1, referenceCell: 32, frames: shipFrames(28) },
+  interceptorShip: { start: 38, fps: 1, loop: true, size: 2.1, width: 1, referenceCell: 32, frames: shipFrames(140) },
+  spreaderShip: { start: 41, fps: 1, loop: true, size: 2.5, width: 1, referenceCell: 32, frames: shipFrames(56) },
+  pulsarShip: { start: 44, fps: 1, loop: true, size: 2.7, width: 1, referenceCell: 32, frames: shipFrames(168) },
+  explosion: { start: 0, fps: 30, loop: false, size: 2.8, width: 1, referenceCell: 16,
     frames: row(fx, 6, [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]) },
-  impact: { start: 13, fps: 35, loop: false, size: 1.15, width: 1,
+  impact: { start: 13, fps: 35, loop: false, size: 1.15, width: 1, referenceCell: 16,
     frames: row(fx, 5, [6, 7, 8, 9, 10]) },
-  playerShot: { start: 18, fps: 12, loop: true, size: 1, width: 0.35,
+  playerShot: { start: 18, fps: 12, loop: true, size: 1, width: 0.35, referenceCell: 16,
     frames: row(weapons, 13, [17]) },
-  enemyShot: { start: 19, fps: 10, loop: true, size: 0.85, width: 1,
+  enemyShot: { start: 19, fps: 10, loop: true, size: 0.85, width: 1, referenceCell: 16,
     frames: row(weapons, 8, [15, 16]) },
-  spreadPickup: { start: 26, fps: 8, loop: true, size: 1.8, width: 1,
-    frames: row('tyrian.shp.01673F.png', 0, [12, 13, 14]) },
-  repairPickup: { start: 29, fps: 8, loop: true, size: 1.8, width: 1,
+  spreadPickup: { start: 26, fps: 8, loop: true, size: 1.8, width: 1, referenceCell: 16,
+    frames: row('tyrian.shp.01673F.png', 0, [13, 14, 15]) },
+  repairPickup: { start: 29, fps: 8, loop: true, size: 1.8, width: 1, referenceCell: 16,
     frames: row('tyrian.shp.01673F.png', 1, [12, 13, 14]) },
-  shield: { start: 21, fps: 30, loop: false, size: 1.2, width: 1,
+  shield: { start: 21, fps: 30, loop: false, size: 1.2, width: 1, referenceCell: 16,
     frames: row(weapons, 11, [15, 16, 17, 16, 15]) },
 } as const;
 export type SpriteClip = keyof typeof SPRITE_CLIPS;

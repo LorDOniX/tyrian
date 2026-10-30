@@ -26,8 +26,10 @@ for (const [name, clip] of Object.entries(SPRITE_CLIPS)) {
     const pixels = keyedFrame(image, rect, Array.from(image.data.subarray(0, 3)));
     if (!pixels.some((value, i) => i % 4 === 3 && value > 0)) throw new Error(`Prázdný snímek ${name} #${offset}`);
     const index = clip.start + offset;
-    const left = index % ATLAS.columns * ATLAS.cell + 2;
-    const top = Math.floor(index / ATLAS.columns) * ATLAS.cell + 1;
+    if (rect.width + 4 > ATLAS.cell || rect.height + 2 > ATLAS.cell ||
+      (index + 1) * ATLAS.cell * ATLAS.cell > ATLAS.width * ATLAS.height) throw new Error(`Snímek ${name} se nevejde do atlasu.`);
+    const left = index % ATLAS.columns * ATLAS.cell + (ATLAS.cell - rect.width) / 2;
+    const top = Math.floor(index / ATLAS.columns) * ATLAS.cell + (ATLAS.cell - rect.height) / 2;
     for (let y = 0; y < rect.height; y++) {
       atlas.set(pixels.subarray(y * rect.width * 4, (y + 1) * rect.width * 4), ((top + y) * ATLAS.width + left) * 4);
     }

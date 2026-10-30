@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import atlasUrl from './assets/tyrian-fx.png?url';
-import { SPRITE_CLIPS, frameUV, spriteFrame } from './sprite-clips.ts';
+import { ATLAS, SPRITE_CLIPS, frameUV, spriteFrame } from './sprite-clips.ts';
 import type { SpriteClip } from './sprite-clips.ts';
 
 // Jeden atlas, jeden materiál a předem sdílená geometrie pro každý snímek.
@@ -34,7 +34,7 @@ export async function createSpriteEffects() {
     model.visible = index !== null;
     if (index === null || !(model instanceof THREE.Mesh)) return;
     model.geometry = geometries.get(index)!;
-    const size = SPRITE_CLIPS[clip].size * scale;
+    const size = SPRITE_CLIPS[clip].size * scale * ATLAS.cell / SPRITE_CLIPS[clip].referenceCell;
     model.scale.set(size * SPRITE_CLIPS[clip].width, size, 1);
   }
   function dispose() {

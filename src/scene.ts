@@ -1,3 +1,4 @@
+import { ENEMY_TYPES, enemyCanCharge } from './enemies.ts';
 import { createSpriteEffects } from './sprite-effects.ts';
 import { bossCircles } from './boss.ts';
 import { createBossModel } from './boss-model.ts';
@@ -70,11 +71,8 @@ export async function createScene(container: HTMLElement) {
   });
 
   const coreGeometry = new THREE.SphereGeometry(0.1, 8, 6);
-  const gunnerMaterial = new THREE.MeshStandardMaterial({ color: '#f59e0b', metalness: 0.5, roughness: 0.35 });
   const muzzleGeometry = new THREE.BoxGeometry(0.25, 0.65, 0.25);
-  const chargingMaterial = new THREE.MeshBasicMaterial({ color: '#ffef8a' });
-  const enemyGeometry = new THREE.BoxGeometry(1.1, 1.1, 0.5);
-  const enemyMaterial = new THREE.MeshStandardMaterial({ color: '#fb4563', metalness: 0.3, roughness: 0.4 });
+  const chargingMaterial = new THREE.MeshBasicMaterial({ color: '#ffef8a', transparent: true, depthTest: false, depthWrite: false });
   const debugGeometry = new THREE.RingGeometry(0.97, 1, 32);
   const debugMaterial = new THREE.MeshBasicMaterial({ color: '#a3ff8f', depthTest: false, depthWrite: false, transparent: true });
   const pickupModels = new Map<number, THREE.Object3D>();
@@ -146,15 +144,16 @@ export async function createScene(container: HTMLElement) {
       });
     sync(state.enemies, enemyModels, (enemy) => {
       const model = new THREE.Group();
-      model.add(new THREE.Mesh(enemyGeometry, enemy.kind === 'gunner' ? gunnerMaterial : enemyMaterial));
-      const wings = new THREE.Mesh(enemyGeometry, wingMaterial);
-      wings.scale.set(enemy.kind === 'gunner' ? 1.8 : 1.4, 0.25, 0.4);
-      wings.position.set(0, 0.2, 0);
-      model.add(wings);
-      if (enemy.kind === 'gunner') {
-        const muzzle = new THREE.Mesh(muzzleGeometry, chargingMaterial);
+      const icon = sprites.create(ENEMY_TYPES[enemy.kind].clip);
+      icon.name = 'icon';
+      icon.rotation.z = Math.PI; // Tyrian předlohy míří vzhůru, nepřátelé letí dolů.
+      icon.renderOrder = 6;
+      model.add(icon);
+      if (enemy.kind !== 'scout') {
+        const muzzle = new THREE.Mesh(coreGeometry, chargingMaterial);
         muzzle.name = 'muzzle';
-        muzzle.position.set(0, -0.65, 0.3);
+        muzzle.position.set(0, -0.8, 0.4);
+        muzzle.renderOrder = 7;
         model.add(muzzle);
       }
       if (enemy.drop) {
@@ -166,12 +165,18 @@ export async function createScene(container: HTMLElement) {
       return model;
     }, (model, enemy) => {
       place(model, enemy);
-      model.visible = enemy.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
+      const icon = model.getObjectByName('icon')!;
+      const bank = Math.abs(enemy.x - enemy.previousX) < 0.002 ? 1 : enemy.x > enemy.previousX ? 2 : 0;
+      sprites.animate(icon, ENEMY_TYPES[enemy.kind].clip, bank);
+      // Záblesk zásahu skrývá pouze trup, nikoli signál chystaného útoku.
+      icon.visible = enemy.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
       const muzzle = model.getObjectByName('muzzle');
       if (muzzle) {
-        const charging = enemy.phase === 'charging';
-        muzzle.scale.setScalar(charging ? 1 + (1 - Math.max(0, enemy.shotLeft) / 0.8) * 0.7 : 0.7);
-        muzzle.visible = !charging || Math.floor(state.time * 12) % 2 === 0;
+        const interval = ENEMY_TYPES[enemy.kind].interval;
+        const preparation = Math.min(0.5, interval);
+        const charging = enemyCanCharge(enemy) && enemy.shotLeft <= preparation;
+        muzzle.visible = charging;
+        muzzle.scale.setScalar(1 + (1 - Math.max(0, enemy.shotLeft) / preparation) * 1.8);
       }
     });
     sync(state.groundTargets, groundModels, () => {
@@ -269,17 +274,17 @@ export async function createScene(container: HTMLElement) {
     terrain.dispose();
     bossModel.dispose();
     // Sprity vlastní svůj sdílený materiál, geometrii a texturu.
-    for (const models of [bulletModels, effectModels, pickupModels]) {
+    for (const models of [bulletModels, enemyModels, effectModels, pickupModels]) {
       models.forEach(model => scene.remove(model));
       models.clear();
     }
     sprites.dispose();
     // Evidence zahrnuje i sdílené prostředky modelů odstraněných během hry.
     const geometries = new Set<THREE.BufferGeometry>([
-      markerGeometry, enemyGeometry, debugGeometry, coreGeometry, muzzleGeometry, turretBaseGeometry, turretHeadGeometry,
+      markerGeometry, debugGeometry, coreGeometry, muzzleGeometry, turretBaseGeometry, turretHeadGeometry,
     ]);
     const materials = new Set<THREE.Material>([
-      markerMaterial, spreadHalo, repairHalo, enemyMaterial, debugMaterial, gunnerMaterial, chargingMaterial, turretMaterial, wreckMaterial,
+      markerMaterial, spreadHalo, repairHalo, debugMaterial, chargingMaterial, turretMaterial, wreckMaterial,
     ]);
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh || object instanceof THREE.Points) {
