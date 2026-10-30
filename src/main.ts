@@ -1,14 +1,97 @@
 import './style.css';
 import { createScene } from './scene';
+import { createGame, pauseGame, restartGame, resumeGame, updateGame } from './game.ts';
 
-const container = document.querySelector<HTMLElement>('#app');
-
-if (!container) {
-  throw new Error('Chybí kontejner #app.');
+function required<T extends HTMLElement>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+  if (!element) throw new Error(`Chybí ${selector}`);
+  return element;
 }
+const view = createScene(required('#app'));
+const score = required('#score');
+const lives = required('#lives');
+const overlay = required('#overlay');
+const message = required('#message');
+const action = required<HTMLButtonElement>('#action');
+const debugToggle = required<HTMLInputElement>('#debug');
+const state = createGame();
+const keys = new Set<string>();
+const controls = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
+let previousTime: number | undefined;
+let frame = 0;
+let disposed = false;
 
-const dispose = createScene(container);
+function continueGame() {
+  if (document.hidden) return;
+  if (state.status === 'gameOver') restartGame(state);
+  else resumeGame(state);
+  keys.clear();
+  action.blur();
+  debugToggle.blur();
+  previousTime = undefined;
+}
+function pause() {
+  keys.clear();
+  pauseGame(state);
+  previousTime = undefined;
+}
+function keydown(event: KeyboardEvent) {
+  const interactive = event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement;
+  if (interactive && event.code === 'Space') return;
+  if (event.target instanceof HTMLButtonElement && event.code === 'Enter') return;
+  if (event.code === 'Enter' && state.status !== 'playing') {
+    event.preventDefault();
+    if (!event.repeat) continueGame();
+    return;
+  }
+  if (event.code === 'Escape' && !event.repeat) {
+    if (state.status === 'playing') pause();
+    else if (state.status === 'paused') continueGame();
+    return;
+  }
+  if (controls.has(event.code)) {
+    event.preventDefault();
+    if (state.status === 'playing') keys.add(event.code);
+  }
+}
+const keyup = (event: KeyboardEvent) => { keys.delete(event.code); };
+const visibility = () => { if (document.hidden) pause(); };
+window.addEventListener('keydown', keydown);
+window.addEventListener('keyup', keyup);
+window.addEventListener('blur', pause);
+document.addEventListener('visibilitychange', visibility);
+action.addEventListener('click', continueGame);
+
+function tick(time: number) {
+  if (disposed) return;
+  const dt = previousTime === undefined ? 0 : Math.min((time - previousTime) / 1000, 0.05);
+  previousTime = time;
+  const running = state.status === 'playing';
+  updateGame(state, {
+    x: Number(keys.has('ArrowRight') || keys.has('KeyD')) - Number(keys.has('ArrowLeft') || keys.has('KeyA')),
+    y: Number(keys.has('ArrowUp') || keys.has('KeyW')) - Number(keys.has('ArrowDown') || keys.has('KeyS')),
+    fire: keys.has('Space'),
+  }, dt);
+  score.textContent = String(state.score).padStart(6, '0');
+  lives.textContent = String(state.lives);
+  overlay.hidden = state.status === 'playing';
+  message.textContent = state.status === 'gameOver' ? `Konec hry · ${state.score} bodů` : 'Pauza';
+  action.textContent = state.status === 'gameOver' ? 'Nová hra · Enter' : 'Pokračovat · Enter';
+  view.render(state, running ? dt : 0, debugToggle.checked);
+  frame = requestAnimationFrame(tick);
+}
+if (!document.hasFocus() || document.hidden) pause();
+frame = requestAnimationFrame(tick);
 
 if (import.meta.hot) {
-  import.meta.hot.dispose(dispose);
+  import.meta.hot.dispose(() => {
+    disposed = true;
+    cancelAnimationFrame(frame);
+    window.removeEventListener('keydown', keydown);
+    window.removeEventListener('keyup', keyup);
+    window.removeEventListener('blur', pause);
+    document.removeEventListener('visibilitychange', visibility);
+    action.removeEventListener('click', continueGame);
+    view.dispose();
+  });
 }

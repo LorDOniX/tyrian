@@ -27,3 +27,11 @@ canvas { display: block; }
 
 .info h1 { margin: 0 0 0.5rem; font-size: 1.5rem; }
 .info p { margin: 0.3rem 0; color: #94a3b8; font-size: 0.875rem; }
+
+.stats strong { color: #e2e8f0; font-variant-numeric: tabular-nums; }
+.debug { position: fixed; bottom: 1rem; left: 1rem; font-size: 0.85rem; color: #a3b4cc; }
+.overlay { position: fixed; inset: 0; display: grid; place-items: center; background: #050b1899; }
+.overlay[hidden] { display: none; }
+.overlay > div { text-align: center; padding: 2rem; border: 1px solid #334155; border-radius: 1rem; background: #101a2c; }
+button { padding: 0.8rem 1.2rem; border: 0; border-radius: 0.5rem; background: #38bdf8; color: #082032; font: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid #fbbf24; outline-offset: 4px; }

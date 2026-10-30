@@ -1,13 +1,9 @@
 import * as THREE from 'three';
 
-// Herní souřadnice: X = doprava, Y = nahoru, Z = hloubka směrem ke kameře.
-const WORLD_WIDTH = 18;
-const WORLD_HEIGHT = 24;
-const SHIP_SPEED = 9;
-const SCROLL_SPEED = 4;
-const BULLET_SPEED = 22;
+import { WORLD_WIDTH, WORLD_HEIGHT } from './game.ts';
+import type { GameState, Body } from './game.ts';
 
-export function createScene(container: HTMLElement): () => void {
+export function createScene(container: HTMLElement) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#050b18');
 
@@ -57,31 +53,37 @@ export function createScene(container: HTMLElement): () => void {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const stars = new THREE.Points(geometry, new THREE.PointsMaterial({
-      color: layer ? '#cdeaff' : '#49658f', size: layer ? 0.07 : 0.04, sizeAttenuation: false,
+      color: layer ? '#cdeaff' : '#49658f', size: layer ? 2.5 : 1.5, sizeAttenuation: false,
     }));
-    // U ortografické kamery jsou body v pixelech, proto volíme čitelné velikosti.
-    stars.material.size = layer ? 2.5 : 1.5;
     scene.add(stars);
     return { stars, positions, speed };
   });
 
   const bulletGeometry = new THREE.BoxGeometry(0.12, 0.65, 0.12);
   const bulletMaterial = new THREE.MeshBasicMaterial({ color: '#67e8f9' });
-  const bullets: THREE.Mesh[] = [];
-  const keys = new Set<string>();
-  const gameKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
-  const keydown = (event: KeyboardEvent) => {
-    if (gameKeys.has(event.code)) {
-      event.preventDefault();
-      keys.add(event.code);
+  const enemyGeometry = new THREE.BoxGeometry(1.1, 1.1, 0.5);
+  const enemyMaterial = new THREE.MeshStandardMaterial({ color: '#fb4563', metalness: 0.3, roughness: 0.4 });
+  const effectGeometry = new THREE.RingGeometry(0.7, 1, 24);
+  const effectMaterial = new THREE.MeshBasicMaterial({ color: '#ffb454', side: THREE.DoubleSide });
+  const debugGeometry = new THREE.RingGeometry(0.97, 1, 32);
+  const debugMaterial = new THREE.MeshBasicMaterial({ color: '#a3ff8f', depthTest: false });
+  const bulletModels = new Map<number, THREE.Object3D>();
+  const enemyModels = new Map<number, THREE.Object3D>();
+  const effectModels = new Map<number, THREE.Object3D>();
+  const debugModels = new Map<number, THREE.Object3D>();
+
+  function sync<T extends { id: number }>(items: T[], models: Map<number, THREE.Object3D>,
+    create: () => THREE.Object3D, update: (model: THREE.Object3D, item: T) => void) {
+    const ids = new Set(items.map(item => item.id));
+    for (const [id, model] of models) {
+      if (!ids.has(id)) { scene.remove(model); models.delete(id); }
     }
-  };
-  const keyup = (event: KeyboardEvent) => { keys.delete(event.code); };
-  const clearKeys = () => { keys.clear(); };
-  window.addEventListener('keydown', keydown);
-  window.addEventListener('keyup', keyup);
-  window.addEventListener('blur', clearKeys);
-  document.addEventListener('visibilitychange', clearKeys);
+    for (const item of items) {
+      let model = models.get(item.id);
+      if (!model) { model = create(); models.set(item.id, model); scene.add(model); }
+      update(model, item);
+    }
+  }
 
   // Pevná herní plocha 18 × 24. Okraje okna se vyplní pozadím (letterbox).
   const resize = () => {
@@ -97,60 +99,51 @@ export function createScene(container: HTMLElement): () => void {
   observer.observe(container);
   resize();
 
-  let previousTime: number | undefined;
-  let cooldown = 0;
-  const direction = new THREE.Vector2();
-  renderer.setAnimationLoop((time: number) => {
-    // Čas v sekundách; po návratu z neaktivní záložky nedovolíme velký skok.
-    const dt = previousTime === undefined ? 0 : Math.min((time - previousTime) / 1000, 0.05);
-    previousTime = time;
-    direction.set(
-      Number(keys.has('ArrowRight') || keys.has('KeyD')) - Number(keys.has('ArrowLeft') || keys.has('KeyA')),
-      Number(keys.has('ArrowUp') || keys.has('KeyW')) - Number(keys.has('ArrowDown') || keys.has('KeyS')),
-    );
-    if (direction.lengthSq() > 0) direction.normalize();
-    ship.position.x = THREE.MathUtils.clamp(ship.position.x + direction.x * SHIP_SPEED * dt, -8, 8);
-    ship.position.y = THREE.MathUtils.clamp(ship.position.y + direction.y * SHIP_SPEED * dt, -10.5, 10.5);
-    // Náklon je pouze vizuální: logika pohybu zůstává ve 2D.
-    ship.rotation.y = THREE.MathUtils.damp(ship.rotation.y, direction.x * -0.35, 10, dt);
-    flame.scale.y = 0.85 + Math.sin(time * 0.025) * 0.15;
-
-    cooldown = Math.max(0, cooldown - dt);
-    if (keys.has('Space') && cooldown === 0) {
-      const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
-      bullet.position.set(ship.position.x, ship.position.y + 1.1, 0);
-      scene.add(bullet);
-      bullets.push(bullet);
-      cooldown = 0.14;
-    }
-    for (let i = bullets.length - 1; i >= 0; i--) {
-      const bullet = bullets[i]!;
-      bullet.position.y += BULLET_SPEED * dt;
-      if (bullet.position.y > WORLD_HEIGHT / 2 + 1) {
-        scene.remove(bullet);
-        bullets.splice(i, 1);
-      }
-    }
+  function render(state: GameState, dt: number, debug: boolean) {
+    ship.position.set(state.player.x, state.player.y, 0);
+    ship.rotation.y = state.tilt;
+    ship.visible = state.status !== 'gameOver' &&
+      (state.invulnerabilityLeft === 0 || Math.floor(state.time * 12) % 2 === 0);
+    flame.scale.y = 0.85 + Math.sin(state.time * 25) * 0.15;
+    const place = (model: THREE.Object3D, body: Body) => { model.position.set(body.x, body.y, 0); };
+    sync(state.bullets, bulletModels, () => new THREE.Mesh(bulletGeometry, bulletMaterial), place);
+    sync(state.enemies, enemyModels, () => {
+      const model = new THREE.Group();
+      model.add(new THREE.Mesh(enemyGeometry, enemyMaterial));
+      const wings = new THREE.Mesh(enemyGeometry, wingMaterial);
+      wings.scale.set(1.4, 0.25, 0.4);
+      wings.position.set(0, 0.2, 0);
+      model.add(wings);
+      return model;
+    }, place);
+    sync(state.effects, effectModels, () => new THREE.Mesh(effectGeometry, effectMaterial), (model, effect) => {
+      model.position.set(effect.x, effect.y, 1);
+      model.scale.setScalar(0.1 + effect.age * 4);
+    });
+    sync(debug ? [state.player, ...state.enemies, ...state.bullets] : [], debugModels,
+      () => new THREE.Mesh(debugGeometry, debugMaterial), (model, body) => {
+        model.position.set(body.x, body.y, 2);
+        model.scale.setScalar(body.radius);
+      });
     for (const { stars, positions, speed } of starLayers) {
       for (let i = 1; i < positions.length; i += 3) {
-        positions[i] = positions[i]! - SCROLL_SPEED * speed * dt;
+        positions[i] = positions[i]! - 4 * speed * dt;
         if (positions[i]! < -WORLD_HEIGHT / 2) positions[i] = positions[i]! + WORLD_HEIGHT;
       }
       stars.geometry.attributes.position!.needsUpdate = true;
     }
     renderer.render(scene, camera);
-  });
+  }
 
-  return () => {
-    renderer.setAnimationLoop(null);
+  function dispose() {
     observer.disconnect();
-    window.removeEventListener('keydown', keydown);
-    window.removeEventListener('keyup', keyup);
-    window.removeEventListener('blur', clearKeys);
-    document.removeEventListener('visibilitychange', clearKeys);
-    // Sdílené prostředky uvolníme jen jednou, včetně již odstraněných střel.
-    const geometries = new Set<THREE.BufferGeometry>([bulletGeometry]);
-    const materials = new Set<THREE.Material>([bulletMaterial]);
+    // Evidence zahrnuje i sdílené prostředky modelů odstraněných během hry.
+    const geometries = new Set<THREE.BufferGeometry>([
+      bulletGeometry, enemyGeometry, effectGeometry, debugGeometry,
+    ]);
+    const materials = new Set<THREE.Material>([
+      bulletMaterial, enemyMaterial, effectMaterial, debugMaterial,
+    ]);
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh || object instanceof THREE.Points) {
         geometries.add(object.geometry);
@@ -162,5 +155,7 @@ export function createScene(container: HTMLElement): () => void {
     materials.forEach((material) => material.dispose());
     renderer.dispose();
     renderer.domElement.remove();
-  };
+    [bulletModels, enemyModels, effectModels, debugModels].forEach(models => models.clear());
+  }
+  return { render, dispose };
 }
