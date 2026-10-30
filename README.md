@@ -2,8 +2,8 @@
 
 Prototyp vertikální střílečky: 3D modely, ortografická kamera a pohyb ve 2D.
 Základ vykreslování vysvětluje [faze1.md](faze1.md), nepřátele a herní pravidla
-[faze2.md](faze2.md). Fáze 2 je implementovaná: nepřátelé, zásahy, 3 životy,
-skóre, nezranitelnost, pauza a restart.
+[faze2.md](faze2.md). Fáze 3 přidává [první úroveň](faze3.md): pevné vlny, střelce s mířenými
+střelami a vítězství. Zachovává 3 životy, skóre, pauzu a restart.
 
 ## Spuštění
 
@@ -29,9 +29,10 @@ Pro testy používej Node.js 22.18+ (nebo novější podporovanou řadu).
 ## Soubory
 
 - `src/main.ts` – vstup aplikace a úklid při HMR.
+- `src/level.ts` – časované formace a části úrovně.
 - `src/game.ts` – herní stav a pravidla bez Three.js.
 - `src/collision.ts` – kolizní výpočty ve 2D.
 - `src/scene.ts` – kamera, modely a synchronizace zobrazení.
-- `tests/game.test.ts` – testy herních pravidel.
+- `tests/` – testy kolizí, herních pravidel a celé úrovně.
 - `src/style.css` – základní styly.
 - `index.html` – kontejner scény a nápověda.

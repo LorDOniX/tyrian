@@ -35,3 +35,6 @@ canvas { display: block; }
 .overlay > div { text-align: center; padding: 2rem; border: 1px solid #334155; border-radius: 1rem; background: #101a2c; }
 button { padding: 0.8rem 1.2rem; border: 0; border-radius: 0.5rem; background: #38bdf8; color: #082032; font: inherit; cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 3px solid #fbbf24; outline-offset: 4px; }
+progress { width: min(18rem, 70vw); height: 0.4rem; accent-color: #38bdf8; }
+#section { color: #bae6fd; }
+#result { color: #cbd5e1; }

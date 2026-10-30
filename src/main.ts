@@ -1,4 +1,5 @@
 import './style.css';
+import { LEVEL_DURATION, levelPart } from './level.ts';
 import { createScene } from './scene';
 import { createGame, pauseGame, restartGame, resumeGame, updateGame } from './game.ts';
 
@@ -10,6 +11,9 @@ function required<T extends HTMLElement>(selector: string): T {
 const view = createScene(required('#app'));
 const score = required('#score');
 const lives = required('#lives');
+const progress = required<HTMLProgressElement>('#progress');
+const section = required('#section');
+const result = required('#result');
 const overlay = required('#overlay');
 const message = required('#message');
 const action = required<HTMLButtonElement>('#action');
@@ -23,7 +27,7 @@ let disposed = false;
 
 function continueGame() {
   if (document.hidden) return;
-  if (state.status === 'gameOver') restartGame(state);
+  if (state.status === 'gameOver' || state.status === 'victory') restartGame(state);
   else resumeGame(state);
   keys.clear();
   action.blur();
@@ -75,8 +79,12 @@ function tick(time: number) {
   score.textContent = String(state.score).padStart(6, '0');
   lives.textContent = String(state.lives);
   overlay.hidden = state.status === 'playing';
-  message.textContent = state.status === 'gameOver' ? `Konec hry · ${state.score} bodů` : 'Pauza';
-  action.textContent = state.status === 'gameOver' ? 'Nová hra · Enter' : 'Pokračovat · Enter';
+  const finished = state.status === 'gameOver' || state.status === 'victory';
+  message.textContent = state.status === 'victory' ? 'Úroveň dokončena' : state.status === 'gameOver' ? 'Konec hry' : 'Pauza';
+  result.textContent = finished ? `${state.score} bodů · Zbývající životy: ${state.lives}` : 'Hra čeká na pokračování.';
+  action.textContent = finished ? 'Nová hra · Enter' : 'Pokračovat · Enter';
+  progress.value = Math.min(1, state.time / LEVEL_DURATION);
+  section.textContent = state.status === 'victory' ? 'Hotovo · Úroveň 1' : levelPart(state.time);
   view.render(state, running ? dt : 0, debugToggle.checked);
   frame = requestAnimationFrame(tick);
 }

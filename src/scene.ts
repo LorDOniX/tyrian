@@ -61,6 +61,13 @@ export function createScene(container: HTMLElement) {
 
   const bulletGeometry = new THREE.BoxGeometry(0.12, 0.65, 0.12);
   const bulletMaterial = new THREE.MeshBasicMaterial({ color: '#67e8f9' });
+  const hostileGeometry = new THREE.SphereGeometry(0.22, 12, 8);
+  const hostileMaterial = new THREE.MeshBasicMaterial({ color: '#ff9e35', depthTest: false });
+  const coreGeometry = new THREE.SphereGeometry(0.1, 8, 6);
+  const coreMaterial = new THREE.MeshBasicMaterial({ color: '#fff9cc', depthTest: false });
+  const gunnerMaterial = new THREE.MeshStandardMaterial({ color: '#f59e0b', metalness: 0.5, roughness: 0.35 });
+  const muzzleGeometry = new THREE.BoxGeometry(0.25, 0.65, 0.25);
+  const chargingMaterial = new THREE.MeshBasicMaterial({ color: '#ffef8a' });
   const enemyGeometry = new THREE.BoxGeometry(1.1, 1.1, 0.5);
   const enemyMaterial = new THREE.MeshStandardMaterial({ color: '#fb4563', metalness: 0.3, roughness: 0.4 });
   const effectGeometry = new THREE.RingGeometry(0.7, 1, 24);
@@ -73,14 +80,14 @@ export function createScene(container: HTMLElement) {
   const debugModels = new Map<number, THREE.Object3D>();
 
   function sync<T extends { id: number }>(items: T[], models: Map<number, THREE.Object3D>,
-    create: () => THREE.Object3D, update: (model: THREE.Object3D, item: T) => void) {
+    create: (item: T) => THREE.Object3D, update: (model: THREE.Object3D, item: T) => void) {
     const ids = new Set(items.map(item => item.id));
     for (const [id, model] of models) {
       if (!ids.has(id)) { scene.remove(model); models.delete(id); }
     }
     for (const item of items) {
       let model = models.get(item.id);
-      if (!model) { model = create(); models.set(item.id, model); scene.add(model); }
+      if (!model) { model = create(item); models.set(item.id, model); scene.add(model); }
       update(model, item);
     }
   }
@@ -99,23 +106,60 @@ export function createScene(container: HTMLElement) {
   observer.observe(container);
   resize();
 
+  let lastTime = 0;
   function render(state: GameState, dt: number, debug: boolean) {
+    if (state.time < lastTime) {
+      for (const models of [bulletModels, enemyModels, effectModels, debugModels]) {
+        models.forEach(model => scene.remove(model));
+        models.clear();
+      }
+    }
+    lastTime = state.time;
     ship.position.set(state.player.x, state.player.y, 0);
     ship.rotation.y = state.tilt;
     ship.visible = state.status !== 'gameOver' &&
       (state.invulnerabilityLeft === 0 || Math.floor(state.time * 12) % 2 === 0);
     flame.scale.y = 0.85 + Math.sin(state.time * 25) * 0.15;
     const place = (model: THREE.Object3D, body: Body) => { model.position.set(body.x, body.y, 0); };
-    sync(state.bullets, bulletModels, () => new THREE.Mesh(bulletGeometry, bulletMaterial), place);
-    sync(state.enemies, enemyModels, () => {
+    sync(state.bullets, bulletModels, (bullet) => {
+      if (bullet.owner === 'player') return new THREE.Mesh(bulletGeometry, bulletMaterial);
       const model = new THREE.Group();
-      model.add(new THREE.Mesh(enemyGeometry, enemyMaterial));
+      const outer = new THREE.Mesh(hostileGeometry, hostileMaterial);
+      outer.renderOrder = 10;
+      const core = new THREE.Mesh(coreGeometry, coreMaterial);
+      core.position.z = 0.2;
+      core.renderOrder = 11;
+      model.add(outer, core);
+      return model;
+    }, (model, bullet) => {
+      place(model, bullet);
+      model.position.z = 1.5;
+      model.rotation.z = Math.atan2(bullet.vy, bullet.vx) - Math.PI / 2;
+    });
+    sync(state.enemies, enemyModels, (enemy) => {
+      const model = new THREE.Group();
+      model.add(new THREE.Mesh(enemyGeometry, enemy.kind === 'gunner' ? gunnerMaterial : enemyMaterial));
       const wings = new THREE.Mesh(enemyGeometry, wingMaterial);
-      wings.scale.set(1.4, 0.25, 0.4);
+      wings.scale.set(enemy.kind === 'gunner' ? 1.8 : 1.4, 0.25, 0.4);
       wings.position.set(0, 0.2, 0);
       model.add(wings);
+      if (enemy.kind === 'gunner') {
+        const muzzle = new THREE.Mesh(muzzleGeometry, chargingMaterial);
+        muzzle.name = 'muzzle';
+        muzzle.position.set(0, -0.65, 0.3);
+        model.add(muzzle);
+      }
       return model;
-    }, place);
+    }, (model, enemy) => {
+      place(model, enemy);
+      model.visible = enemy.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
+      const muzzle = model.getObjectByName('muzzle');
+      if (muzzle) {
+        const charging = enemy.phase === 'charging';
+        muzzle.scale.setScalar(charging ? 1 + (1 - Math.max(0, enemy.shotLeft) / 0.8) * 0.7 : 0.7);
+        muzzle.visible = !charging || Math.floor(state.time * 12) % 2 === 0;
+      }
+    });
     sync(state.effects, effectModels, () => new THREE.Mesh(effectGeometry, effectMaterial), (model, effect) => {
       model.position.set(effect.x, effect.y, 1);
       model.scale.setScalar(0.1 + effect.age * 4);
@@ -139,10 +183,10 @@ export function createScene(container: HTMLElement) {
     observer.disconnect();
     // Evidence zahrnuje i sdílené prostředky modelů odstraněných během hry.
     const geometries = new Set<THREE.BufferGeometry>([
-      bulletGeometry, enemyGeometry, effectGeometry, debugGeometry,
+      bulletGeometry, enemyGeometry, effectGeometry, debugGeometry, hostileGeometry, coreGeometry, muzzleGeometry,
     ]);
     const materials = new Set<THREE.Material>([
-      bulletMaterial, enemyMaterial, effectMaterial, debugMaterial,
+      bulletMaterial, enemyMaterial, effectMaterial, debugMaterial, hostileMaterial, coreMaterial, gunnerMaterial, chargingMaterial,
     ]);
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh || object instanceof THREE.Points) {

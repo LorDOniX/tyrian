@@ -2,11 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { circlesOverlap, sweepHit } from '../src/collision.ts';
 import { createGame, updateGame, restartGame, pauseGame, resumeGame } from '../src/game.ts';
-import type { Body } from '../src/game.ts';
+import { LEVEL_EVENTS } from '../src/level.ts';
+import type { Enemy, Bullet } from '../src/game.ts';
+
+const shot = (id: number, x: number, y: number, radius = 0.09, speed = 22): Bullet =>
+  ({ id, x, y, previousX: x, previousY: y, radius, speed, vx: 0, vy: speed, owner: 'player' });
 
 const idle = { x: 0, y: 0, fire: false };
-const body = (id: number, x: number, y: number, radius = 0.6, speed = 0): Body =>
-  ({ id, x, y, previousX: x, previousY: y, radius, speed });
+const body = (id: number, x: number, y: number, radius = 0.6, speed = 0): Enemy =>
+  ({ id, x, y, previousX: x, previousY: y, radius, speed, kind: 'scout', hp: 1, phase: 'entering', shotLeft: 0.8, shots: 0, hitLeft: 0 });
 
 test('circle contact and near miss', () => {
   assert.equal(circlesOverlap(body(1, 0, 0), body(2, 1.2, 0)), true);
@@ -22,7 +26,7 @@ test('sweep: stationary overlap, miss, tangent and moving target', () => {
 test('fast bullet hits nearest enemy independent of array order, scores once', () => {
   const state = createGame();
   state.enemies = [body(2, 0, 1, 0.1), body(3, 0, 0.5, 0.1)];
-  state.bullets = [body(4, 0, 0, 0.09, 22)];
+  state.bullets = [shot(4, 0, 0, 0.09, 22)];
   updateGame(state, idle, 0.05);
   assert.equal(state.score, 100);
   assert.deepEqual(state.enemies.map(e => e.id), [2]);
@@ -43,7 +47,7 @@ test('simultaneous contacts cost one life, protection expires', () => {
 test('shot enemy cannot damage player in same step; offscreen cleanup', () => {
   const state = createGame();
   state.enemies = [body(2, 0, -7), body(3, 0, -14)];
-  state.bullets = [body(4, 0, -7, 0.09, 22)];
+  state.bullets = [shot(4, 0, -7, 0.09, 22)];
   updateGame(state, idle, 0.05);
   assert.equal(state.lives, 3);
   assert.equal(state.score, 100);
@@ -68,9 +72,11 @@ test('pause freezes simulation, resume and deterministic spawning', () => {
   assert.equal(state.time, 0);
   assert.equal(state.bullets.length, 0);
   resumeGame(state);
-  for (let i = 0; i < 25; i++) updateGame(state, idle, 0.05, () => 0.5);
-  assert.equal(state.enemies.length, 1);
-  assert.equal(state.enemies[0]!.x, 0);
+  for (let i = 0; i < 25; i++) updateGame(state, idle, 0.05);
+  assert.equal(state.enemies.length, 3);
+  assert.deepEqual(state.enemies.map(enemy => enemy.x), [-4, 0, 4]);
+  assert.equal(state.nextEvent, 3);
+  assert.ok(LEVEL_EVENTS.length > 3);
 });
 test('diagonal speed is normalized and movement clamped', () => {
   const state = createGame();
