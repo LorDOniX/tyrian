@@ -1,4 +1,4 @@
-import { createEnemy, updateEnemy, enemyVolley, ENEMY_TYPES } from './enemies.ts';
+import { createEnemy, updateEnemy, enemyVolley, ENEMY_TYPES, enemyCircles, enemyExtent } from './enemies.ts';
 import type { Enemy } from './enemies.ts';
 export type { Enemy } from './enemies.ts';
 import { createPickup, updateBonuses, playerVolley, MAX_LIVES } from './bonuses.ts';
@@ -9,7 +9,8 @@ import { createBoss, updateBoss, bossCircles } from './boss.ts';
 import type { Boss } from './boss.ts';
 import { circlesOverlap, sweepHit } from './collision.ts';
 import type { MovingCircle } from './collision.ts';
-import { LEVEL_DURATION, LEVEL_EVENTS, GROUND_TARGETS } from './level.ts';
+import { getLevel } from './level.ts';
+import type { LevelIndex } from './level.ts';
 
 export const WORLD_WIDTH = 18;
 export const WORLD_HEIGHT = 24;
@@ -24,6 +25,7 @@ export type Bullet = Body & { owner: 'player' | 'enemy'; vx: number; vy: number 
 export type Input = { x: number; y: number; fire: boolean };
 export type Effect = { id: number; x: number; y: number; age: number; kind: EffectKind; scale: number };
 export type GameState = BonusState & {
+  levelIndex: LevelIndex; checkpointScore: number;
   missionStage: 'waves' | 'warning' | 'boss' | 'bossDestroyed';
   stageTimer: number; boss: Boss | null;
   status: 'playing' | 'paused' | 'gameOver' | 'victory';
@@ -33,18 +35,29 @@ export type GameState = BonusState & {
   player: Body; groundTargets: GroundTarget[]; wrecks: Wreck[]; enemies: Enemy[]; bullets: Bullet[]; effects: Effect[];
 };
 
-export function createGame(startAtBoss = false): GameState {
+export function createGame(startAtBoss = false, levelIndex: LevelIndex = 0): GameState {
+  const level = getLevel(levelIndex);
+  startAtBoss = startAtBoss && level.boss;
   return {
+    levelIndex, checkpointScore: 0,
     missionStage: startAtBoss ? 'warning' : 'waves', stageTimer: startAtBoss ? 1.5 : 0, boss: null,
     status: 'playing', score: 0, lives: MAX_LIVES,
-    pickups: [], weaponLeft: 0, bonusNotice: null, noticeLeft: 0, time: startAtBoss ? LEVEL_DURATION : 0,
-    scrollDistance: startAtBoss ? LEVEL_DURATION * SCROLL_SPEED : 0, nextGround: startAtBoss ? GROUND_TARGETS.length : 0,
-    nextEvent: startAtBoss ? LEVEL_EVENTS.length : 0, invulnerabilityLeft: 0, cooldown: 0, nextId: 1, tilt: 0,
+    pickups: [], weaponLeft: 0, bonusNotice: null, noticeLeft: 0, time: startAtBoss ? level.duration : 0,
+    scrollDistance: startAtBoss ? level.duration * SCROLL_SPEED : 0, nextGround: startAtBoss ? level.groundTargets.length : 0,
+    nextEvent: startAtBoss ? level.events.length : 0, invulnerabilityLeft: 0, cooldown: 0, nextId: 1, tilt: 0,
     player: { id: 0, x: 0, y: -7, previousX: 0, previousY: -7, radius: 0.45, speed: 9 },
     groundTargets: [], wrecks: [], enemies: [], bullets: [], effects: [],
   };
 }
-export function restartGame(state: GameState): void { Object.assign(state, createGame()); }
+export function restartGame(state: GameState): void {
+  const { levelIndex, checkpointScore } = state;
+  Object.assign(state, createGame(false, levelIndex), { score: checkpointScore, checkpointScore });
+}
+export function advanceLevel(state: GameState): void {
+  if (state.status !== 'victory' || state.levelIndex !== 0) return;
+  const checkpointScore = state.score;
+  Object.assign(state, createGame(false, 1), { score: checkpointScore, checkpointScore });
+}
 export function pauseGame(state: GameState): void { if (state.status === 'playing') state.status = 'paused'; }
 export function resumeGame(state: GameState): void { if (state.status === 'paused') state.status = 'playing'; }
 
@@ -69,6 +82,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   state.effects = state.effects.filter(effect => (effect.age += dt) < clipDuration(effect.kind));
   if (state.status !== 'playing') return;
   if (state.lives <= 0) { state.status = 'gameOver'; return; }
+  const level = getLevel(state.levelIndex);
   state.time += dt;
   if (state.missionStage === 'warning') {
     state.stageTimer -= dt;
@@ -79,9 +93,9 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   const previousDistance = state.scrollDistance;
   state.scrollDistance += SCROLL_SPEED * dt;
-  while (state.nextGround < GROUND_TARGETS.length &&
-    GROUND_TARGETS[state.nextGround]!.levelY - state.scrollDistance <= 13) {
-    const target = GROUND_TARGETS[state.nextGround++]!;
+  while (state.nextGround < level.groundTargets.length &&
+    level.groundTargets[state.nextGround]!.levelY - state.scrollDistance <= 13) {
+    const target = level.groundTargets[state.nextGround++]!;
     state.groundTargets.push({ id: state.nextId++, kind: 'turret', x: target.x,
       levelY: target.levelY, y: target.levelY - previousDistance,
       previousX: target.x, previousY: target.levelY - previousDistance,
@@ -131,8 +145,8 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     }
     state.cooldown = 0.14;
   }
-  while (state.nextEvent < LEVEL_EVENTS.length && LEVEL_EVENTS[state.nextEvent]!.at <= state.time) {
-    const event = LEVEL_EVENTS[state.nextEvent++]!;
+  while (state.nextEvent < level.events.length && level.events[state.nextEvent]!.at <= state.time) {
+    const event = level.events[state.nextEvent++]!;
     state.enemies.push(createEnemy(state.nextId++, event.kind, event.x, event.y, event.drop));
   }
   const pendingShots = state.enemies.filter(enemy => updateEnemy(enemy, dt));
@@ -147,8 +161,9 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   for (const bullet of state.bullets) {
     if (bullet.owner !== 'player') continue;
     for (const enemy of [...state.enemies, ...state.groundTargets]) {
-      const time = sweepHit(bullet, enemy);
-      if (time !== null) hits.push({ time, bullet, enemy });
+      const circles = enemy.kind === 'turret' ? [enemy] : enemyCircles(enemy);
+      const times = circles.map(circle => sweepHit(bullet, circle)).filter((time): time is number => time !== null);
+      if (times.length) hits.push({ time: Math.min(...times), bullet, enemy });
     }
   }
   if (state.boss && state.boss.mode !== 'destroyed') {
@@ -197,6 +212,10 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     state.score += enemy.kind === 'boss' ? 2000 : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
     explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
       enemy.previousY + (enemy.y - enemy.previousY) * time);
+    if (enemy.kind === 'airship') {
+      effect('explosion', enemy.x - 0.8, enemy.y - 2, 1.3);
+      effect('explosion', enemy.x + 0.8, enemy.y + 2, 1.3);
+    }
   }
   const damagePlayer = () => {
     if (state.invulnerabilityLeft > 0) return;
@@ -217,16 +236,18 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   for (const enemy of state.enemies) {
     if (state.invulnerabilityLeft > 0) break;
-    if (!deadEnemies.has(enemy.id) && circlesOverlap(player, enemy)) {
-      deadEnemies.add(enemy.id);
+    if (!deadEnemies.has(enemy.id) && enemyCircles(enemy).some(circle => circlesOverlap(player, circle))) {
+      if (enemy.kind !== 'airship') {
+        deadEnemies.add(enemy.id);
+        explode(enemy.x, enemy.y);
+      }
       damagePlayer();
-      explode(enemy.x, enemy.y);
     }
   }
   if (state.boss && state.boss.mode !== 'entering' && state.boss.mode !== 'destroyed' &&
     bossCircles(state.boss).some(circle => circlesOverlap(player, circle))) damagePlayer();
   state.groundTargets = state.groundTargets.filter(target => !deadEnemies.has(target.id) && target.y + TURRET_EXTENT >= -12);
-  state.enemies = state.enemies.filter(enemy => !deadEnemies.has(enemy.id) && enemy.y + enemy.radius >= -12);
+  state.enemies = state.enemies.filter(enemy => !deadEnemies.has(enemy.id) && enemy.y + enemyExtent(enemy) >= -12);
   state.bullets = state.bullets.filter(bullet => !deadBullets.has(bullet.id) &&
     Math.abs(bullet.x) <= WORLD_WIDTH / 2 + 1 && Math.abs(bullet.y) <= WORLD_HEIGHT / 2 + 1);
   // Přeživší střelec vystřelí až po kolizích. Projektil se pohne příští krok.
@@ -249,10 +270,15 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     for (const shot of pendingBossShots) state.bullets.push(makeBullet(state, shot.x, shot.y, 'enemy', shot.vx, shot.vy));
   }
   if (state.lives === 0) state.status = 'gameOver';
-  else if (state.missionStage === 'waves' && state.time >= LEVEL_DURATION && state.nextEvent === LEVEL_EVENTS.length &&
-    state.enemies.length === 0 && state.nextGround === GROUND_TARGETS.length &&
+  else if (state.missionStage === 'waves' && state.time >= level.duration && state.nextEvent === level.events.length &&
+    state.enemies.length === 0 && state.nextGround === level.groundTargets.length &&
     state.groundTargets.length === 0 && !state.bullets.some(bullet => bullet.owner === 'enemy')) {
-    state.missionStage = 'warning';
-    state.stageTimer = 1.5;
+    if (level.boss) {
+      state.missionStage = 'warning';
+      state.stageTimer = 1.5;
+    } else {
+      state.status = 'victory';
+      state.pickups = [];
+    }
   }
 }

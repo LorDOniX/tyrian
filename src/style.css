@@ -51,3 +51,7 @@ progress { width: min(18rem, 70vw); height: 0.4rem; accent-color: #38bdf8; }
 #bonus-notice { color: #ffffff; min-height: 1.1em; }
 .bonus-help span:first-child { color: #fbbf24; }
 .bonus-help span:last-child { color: #86efac; }
+.debug-tools { position: fixed; bottom: 5rem; left: 1rem; }
+.debug-tools button { padding: 0.45rem 0.7rem; font-size: 0.8rem; background: #334155; color: #e2e8f0; }
+.debug-tools { z-index: 2; }
+.debug-tools p { max-width: 20rem; margin: 0.35rem 0 0; font-size: 0.75rem; color: #d8b4fe; text-shadow: 0 1px 3px #000; }

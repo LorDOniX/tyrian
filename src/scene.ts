@@ -1,4 +1,4 @@
-import { ENEMY_TYPES, enemyCanCharge } from './enemies.ts';
+import { ENEMY_TYPES, enemyCanCharge, enemySpritePose, enemyCircles } from './enemies.ts';
 import { createSpriteEffects } from './sprite-effects.ts';
 import { bossCircles } from './boss.ts';
 import { createBossModel } from './boss-model.ts';
@@ -120,14 +120,16 @@ export async function createScene(container: HTMLElement) {
   resize();
 
   let lastTime = 0;
+  let lastLevel = -1;
   function render(state: GameState, debug: boolean, showTerrain: boolean) {
-    if (state.time < lastTime) {
+    if (state.time < lastTime || state.levelIndex !== lastLevel) {
       for (const models of [bulletModels, enemyModels, groundModels, wreckModels, effectModels, pickupModels, debugModels]) {
         models.forEach(model => scene.remove(model));
         models.clear();
       }
     }
     lastTime = state.time;
+    lastLevel = state.levelIndex;
     ship.position.set(state.player.x, state.player.y, 0);
     ship.rotation.y = state.tilt;
     ship.visible = state.status !== 'gameOver' &&
@@ -146,15 +148,17 @@ export async function createScene(container: HTMLElement) {
       const model = new THREE.Group();
       const icon = sprites.create(ENEMY_TYPES[enemy.kind].clip);
       icon.name = 'icon';
-      icon.rotation.z = Math.PI; // Tyrian předlohy míří vzhůru, nepřátelé letí dolů.
+      icon.rotation.z = enemy.kind === 'airship' ? 0 : Math.PI; // Menší lodě míří v předloze vzhůru, vzducholoď již dolů.
       icon.renderOrder = 6;
       model.add(icon);
       if (enemy.kind !== 'scout') {
-        const muzzle = new THREE.Mesh(coreGeometry, chargingMaterial);
-        muzzle.name = 'muzzle';
-        muzzle.position.set(0, -0.8, 0.4);
-        muzzle.renderOrder = 7;
-        model.add(muzzle);
+        for (const [index, x] of (enemy.kind === 'airship' ? [-1.8, 1.8] : [0]).entries()) {
+          const muzzle = new THREE.Mesh(coreGeometry, chargingMaterial);
+          muzzle.name = index === 0 ? 'muzzle' : 'muzzle-right';
+          muzzle.position.set(x, -0.8, 0.4);
+          muzzle.renderOrder = 7;
+          model.add(muzzle);
+        }
       }
       if (enemy.drop) {
         const halo = new THREE.Mesh(debugGeometry, enemy.drop === 'spread' ? spreadHalo : repairHalo);
@@ -166,12 +170,13 @@ export async function createScene(container: HTMLElement) {
     }, (model, enemy) => {
       place(model, enemy);
       const icon = model.getObjectByName('icon')!;
-      const bank = Math.abs(enemy.x - enemy.previousX) < 0.002 ? 1 : enemy.x > enemy.previousX ? 2 : 0;
+      const bank = enemySpritePose(enemy);
       sprites.animate(icon, ENEMY_TYPES[enemy.kind].clip, bank);
       // Záblesk zásahu skrývá pouze trup, nikoli signál chystaného útoku.
       icon.visible = enemy.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
-      const muzzle = model.getObjectByName('muzzle');
-      if (muzzle) {
+      for (const name of ['muzzle', 'muzzle-right']) {
+        const muzzle = model.getObjectByName(name);
+        if (!muzzle) continue;
         const interval = ENEMY_TYPES[enemy.kind].interval;
         const preparation = Math.min(0.5, interval);
         const charging = enemyCanCharge(enemy) && enemy.shotLeft <= preparation;
@@ -250,14 +255,15 @@ export async function createScene(container: HTMLElement) {
     });
     const bossDebug = state.boss && state.boss.mode !== 'destroyed'
       ? bossCircles(state.boss).map((circle, index) => ({ ...circle, id: -100 - index })) : [];
-    sync(debug ? [state.player, ...state.enemies, ...state.groundTargets, ...state.bullets, ...state.pickups, ...bossDebug] : [], debugModels,
+    sync(debug ? [state.player, ...state.enemies.flatMap(enemy => enemy.kind === 'airship'
+        ? enemyCircles(enemy).map((circle, i) => ({ ...circle, id: -1000 - enemy.id * 4 - i })) : [enemy]), ...state.groundTargets, ...state.bullets, ...state.pickups, ...bossDebug] : [], debugModels,
       () => new THREE.Mesh(debugGeometry, debugMaterial), (model, body) => {
         model.position.set(body.x, body.y, 2);
         model.scale.setScalar(body.radius);
         model.renderOrder = 30;
       });
     bossModel.render(state.boss, state.time, state.stageTimer);
-    terrain.render(state.scrollDistance, state.player.x, state.player.y, showTerrain, ship.visible);
+    terrain.render(state.scrollDistance, state.player.x, state.player.y, showTerrain, ship.visible, state.levelIndex);
     for (const { stars, positions, original, speed } of starLayers) {
       stars.visible = !showTerrain;
       for (let i = 1; i < positions.length; i += 3) {

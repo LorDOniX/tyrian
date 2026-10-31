@@ -4,7 +4,7 @@ import { createEnemy, updateEnemy, enemyVolley, ENEMY_TYPES } from '../src/enemi
 import type { EnemyKind } from '../src/enemies.ts';
 import { createGame, updateGame, pauseGame, restartGame } from '../src/game.ts';
 import { LEVEL_EVENTS, GROUND_TARGETS } from '../src/level.ts';
-import { ATLAS, SPRITE_CLIPS } from '../src/sprite-clips.ts';
+import { ATLAS, SPRITE_CLIPS, atlasRegion } from '../src/sprite-clips.ts';
 const idle = { x: 0, y: 0, fire: false };
 const player = { x: 0, y: -7 };
 function ready(kind: EnemyKind) {
@@ -27,14 +27,15 @@ test('every type has complete Tyrian poses with matching atlas capacity', () => 
     assert.equal(enemy.hp, ENEMY_TYPES[kind].hp);
     assert.equal(enemy.radius, ENEMY_TYPES[kind].radius);
     const clip = SPRITE_CLIPS[ENEMY_TYPES[kind].clip];
-    assert.equal(clip.frames.length, 3);
+    assert.equal(clip.frames.length, kind === 'airship' ? 2 : 3);
     assert.equal(starts.has(clip.start), false);
     starts.add(clip.start);
     for (const frame of clip.frames) {
-      assert.equal(frame.width, 24);
-      assert.equal(frame.height, 28);
-      assert.equal(frame.source, 'newsh$.shp.000000.png');
-      assert.ok(frame.width + 4 <= ATLAS.cell && frame.height + 2 <= ATLAS.cell);
+      assert.equal(frame.width, kind === 'airship' ? 96 : 24);
+      assert.equal(frame.height, kind === 'airship' ? 140 : 28);
+      assert.equal(frame.source, kind === 'airship' ? 'newshi.shp.000000.png' : 'newsh$.shp.000000.png');
+      const region = atlasRegion(clip.start);
+      assert.ok(frame.width + 4 <= region.width && frame.height + 2 <= region.height);
     }
   }
   // Větší atlas nesmí změnit vizuální rozměr starších projektilů a efektů.

@@ -9,7 +9,7 @@
   <body>
     <main id="app" aria-label="Vesmírná loď – ovládání šipkami nebo WASD a střelba mezerníkem"></main>
     <aside class="info">
-      <h1>Fáze 8 · Flotila</h1>
+      <h1 id="level-title">Level 1 · Základna</h1>
       <p class="stats">Skóre <strong id="score">000000</strong> · Životy <strong id="lives">3</strong></p>
       <p id="section">1 / 3 · Formace</p>
       <progress id="progress" max="1" value="0" aria-label="Průběh úrovně"></progress>
@@ -23,6 +23,7 @@
       <p id="boss-label">Velitel · 60 / 60</p>
       <progress id="boss-health" max="60" value="60" aria-label="Životy bosse"></progress>
     </aside>
+    <div id="debug-tools" class="debug-tools" hidden><button id="debug-level2" type="button">Debug: start levelu 2</button><p id="debug-airships"></p></div>
     <label class="terrain-toggle"><input id="terrain" type="checkbox" checked /> Terén</label>
     <label class="debug"><input id="debug" type="checkbox" /> Kolizní kruhy</label>
     <section id="overlay" class="overlay" hidden aria-label="Stav hry">

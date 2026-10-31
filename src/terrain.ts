@@ -56,8 +56,11 @@ export function createTerrain(scene: THREE.Scene) {
   shadow.scale.set(0.85, 0.5, 1);
   root.add(shadow);
 
-  function render(distance: number, x: number, y: number, visible: boolean, shipVisible: boolean) {
+  function render(distance: number, x: number, y: number, visible: boolean, shipVisible: boolean, levelIndex = 0) {
     root.visible = visible;
+    floor.color.set(levelIndex === 1 ? '#192a3a' : '#101e2b');
+    panel.color.set(levelIndex === 1 ? '#4b4261' : '#1c3342');
+    marking.color.set(levelIndex === 1 ? '#6c7793' : '#47605d');
     segmentLayout(distance).forEach((layout, slot) => {
       const { group, buildings } = segments[slot]!;
       group.position.y = layout.y;

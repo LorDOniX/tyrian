@@ -8,7 +8,8 @@ pozemní věže, trosky a stín lodi. [Fáze 5](faze5.md) zakončuje misi bossem
 se dvěma fázemi, mířenou salvou a vějířem střel. [Fáze 6](faze6.md) používá
 sprite exploze, zásahy a projektily z přidaných Tyrian assetů. [Fáze 7](faze7.md)
 přidává sbíratelnou opravu a dočasnou trojstřelu. [Fáze 8](faze8.md) mění běžné
-lodě na Tyrian sprity a rozšiřuje flotilu na 50 lodí pěti typů. Zachovává 3 životy, skóre, pauzu a restart.
+lodě na Tyrian sprity a rozšiřuje flotilu na 50 lodí pěti typů. [Fáze 9](faze9.md)
+přidává druhý level se vzducholoděmi, poškozenými variantami trupu a debug startem. Zachovává 3 životy, skóre, pauzu a restart.
 
 ## Spuštění
 
@@ -24,11 +25,14 @@ zaškrtávátkem. Přepínač Terén skrývá pouze dekoraci, nikoli věže a st
 Pro testy používej Node.js 22.18+ (nebo novější podporovanou řadu).
 
 Pro ladění závěrečného souboje: `npm run dev -- --mode boss`.
-Produkční hra vždy začíná vlnami; restart po výsledku také vrací začátek mise.
+Přímo do druhého levelu: `npm run dev:level2`. Ve vývoji lze použít i tlačítko
+„Debug: start levelu 2“. Po vítězství v prvním levelu Enter přejde do druhého;
+po prohře restartuje aktuální level. Produkční hra vždy začíná levelem 1.
 
 ## Příkazy
 
 - `npm run dev` – vývojový server.
+- `npm run dev:level2` – vývojový start přímo ve druhém levelu.
 - `npm run assets:prepare` – volitelné obnovení sprite atlasu ze zdrojů (vyžaduje FFmpeg).
 - `npm test` – testy kolizí a herních pravidel.
 - `npm run typecheck` – kontrola typů.
@@ -41,7 +45,7 @@ Produkční hra vždy začíná vlnami; restart po výsledku také vrací začá
 - `src/level.ts` – časované formace a části úrovně.
 - `src/boss.ts` – pravidla souboje a útoků.
 - `src/boss-model.ts` – 3D model a vizuální signalizace.
-- `src/start-mode.ts` – omezení vývojového vstupu do souboje.
+- `src/start-mode.ts` – vývojové vstupy k bossovi a do druhého levelu.
 - `src/enemies.ts` – typy nepřátel, pohyb a čtyři vzory střelby.
 - `src/bonuses.ts` – bonusy, opravy a dočasná trojstřela.
 - `src/game.ts` – herní stav a pravidla bez Three.js.

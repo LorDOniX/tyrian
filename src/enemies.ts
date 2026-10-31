@@ -1,8 +1,9 @@
 import type { MovingCircle } from './collision.ts';
 import type { PickupKind } from './bonuses.ts';
 
-export type EnemyKind = 'scout' | 'gunner' | 'interceptor' | 'spreader' | 'pulsar';
+export type EnemyKind = 'scout' | 'gunner' | 'interceptor' | 'spreader' | 'pulsar' | 'airship';
 export const ENEMY_TYPES = {
+  airship: { hp: 16, radius: 1.65, speed: 2, score: 1000, interval: 1.8, volleys: 3, stopY: 6, clip: 'airship' },
   scout: { hp: 1, radius: 0.6, speed: 4, score: 100, interval: 0.8, volleys: 0, stopY: 7, clip: 'scoutShip' },
   gunner: { hp: 2, radius: 0.75, speed: 4, score: 250, interval: 0.8, volleys: 3, stopY: 7, clip: 'gunnerShip' },
   interceptor: { hp: 1, radius: 0.65, speed: 4.5, score: 150, interval: 1.5, volleys: 2, stopY: 7, clip: 'interceptorShip' },
@@ -21,6 +22,20 @@ export function createEnemy(id: number, kind: EnemyKind, x: number, y: number, d
   return { id, kind, x, y, previousX: x, previousY: y, originX: x, age: 0, drop,
     radius: type.radius, speed: type.speed, hp: type.hp,
     phase: 'entering', shotLeft: type.interval, shots: 0, hitLeft: 0 };
+}
+
+// Velký trup má více kruhů, ale sdílí jeden počet životů.
+export function enemyCircles(enemy: Enemy): MovingCircle[] {
+  if (enemy.kind !== 'airship') return [enemy];
+  return [{ y: -2, radius: 1.05 }, { y: 0, radius: 1.65 }, { y: 2, radius: 1.25 }].map(part => ({
+    x: enemy.x, y: enemy.y + part.y, previousX: enemy.previousX,
+    previousY: enemy.previousY + part.y, radius: part.radius,
+  }));
+}
+export function enemyExtent(enemy: Enemy): number { return enemy.kind === 'airship' ? 3.5 : enemy.radius; }
+export function enemySpritePose(enemy: Enemy): number {
+  if (enemy.kind === 'airship') return enemy.hp < ENEMY_TYPES.airship.hp ? 1 : 0;
+  return Math.abs(enemy.x - enemy.previousX) < 0.002 ? 1 : enemy.x > enemy.previousX ? 2 : 0;
 }
 
 export function enemyCanCharge(enemy: Enemy): boolean {
@@ -64,7 +79,15 @@ export function enemyVolley(enemy: Enemy, player: { x: number; y: number }): Ene
   const x = enemy.x;
   const y = enemy.y - 0.8;
   let shots: EnemyShot[];
-  if (enemy.kind === 'gunner') {
+  if (enemy.kind === 'airship') {
+    shots = [-1.8, 1.8].map(offset => {
+      const from = { x: x + offset, y: enemy.y - 0.8 };
+      const dx = player.x - from.x;
+      const dy = player.y - from.y;
+      const length = Math.hypot(dx, dy);
+      return { ...from, vx: length > 0 ? dx / length * 5 : 0, vy: length > 0 ? dy / length * 5 : -5 };
+    });
+  } else if (enemy.kind === 'gunner') {
     const dx = player.x - x;
     const dy = player.y - y;
     const length = Math.hypot(dx, dy);

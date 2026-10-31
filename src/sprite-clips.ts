@@ -1,6 +1,6 @@
 // Výřezy zdrojů jsou v pixelech od levého horního rohu, indexované od nuly.
-// Efekty 12 × 14 i celé lodě 24 × 28 mají pevný střed v buňkách 32 × 32.
-export const ATLAS = { width: 512, height: 128, cell: 32, columns: 16 } as const;
+// Malé snímky mají buňky 32 × 32, vzducholodě vlastní oblasti 128 × 160.
+export const ATLAS = { width: 512, height: 512, cell: 32, columns: 16 } as const;
 const fx = 'newsh6.shp.000000.png';
 const weapons = 'newsh(.shp.000000.png';
 const row = (source: string, y: number, columns: number[]) =>
@@ -11,6 +11,8 @@ const shipFrames = (y: number) => [0, 48, 96].map(x => ({
 }));
 
 export const SPRITE_CLIPS = {
+  airship: { start: 47, fps: 1, loop: true, size: 8, width: 0.8, referenceCell: 32,
+    frames: [0, 96].map(x => ({ source: 'newshi.shp.000000.png', x, y: 0, width: 96, height: 140 })) },
   scoutShip: { start: 32, fps: 1, loop: true, size: 2, width: 1, referenceCell: 32, frames: shipFrames(0) },
   gunnerShip: { start: 35, fps: 1, loop: true, size: 2.3, width: 1, referenceCell: 32, frames: shipFrames(28) },
   interceptorShip: { start: 38, fps: 1, loop: true, size: 2.1, width: 1, referenceCell: 32, frames: shipFrames(140) },
@@ -47,13 +49,18 @@ export function spriteFrame(name: SpriteClip, age: number): number | null {
   return clip.start + frame % clip.frames.length;
 }
 
+// Dva velké výřezy mají vlastní obdélníky pod řadami malých snímků.
+export function atlasRegion(index: number) {
+  if (index === 47 || index === 48) return { x: (index - 47) * 128, y: 128, width: 128, height: 160 };
+  return { x: index % ATLAS.columns * ATLAS.cell, y: Math.floor(index / ATLAS.columns) * ATLAS.cell,
+    width: ATLAS.cell, height: ATLAS.cell };
+}
 export function frameUV(index: number) {
-  const column = index % ATLAS.columns;
-  const row = Math.floor(index / ATLAS.columns);
+  const region = atlasRegion(index);
   return {
-    left: column * ATLAS.cell / ATLAS.width,
-    right: (column + 1) * ATLAS.cell / ATLAS.width,
-    bottom: 1 - (row + 1) * ATLAS.cell / ATLAS.height,
-    top: 1 - row * ATLAS.cell / ATLAS.height,
+    left: region.x / ATLAS.width,
+    right: (region.x + region.width) / ATLAS.width,
+    bottom: 1 - (region.y + region.height) / ATLAS.height,
+    top: 1 - region.y / ATLAS.height,
   };
 }

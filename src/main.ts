@@ -1,9 +1,9 @@
 import { SPREAD_DURATION } from './bonuses.ts';
-import { startAtBoss } from './start-mode.ts';
+import { startAtBoss, startLevel } from './start-mode.ts';
 import './style.css';
-import { LEVEL_DURATION, levelPart } from './level.ts';
+import { getLevel, levelPart } from './level.ts';
 import { createScene } from './scene';
-import { createGame, pauseGame, restartGame, resumeGame, updateGame } from './game.ts';
+import { createGame, advanceLevel, pauseGame, restartGame, resumeGame, updateGame } from './game.ts';
 
 function required<T extends HTMLElement>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -36,7 +36,18 @@ const bonusNotice = required('#bonus-notice');
 const bossHud = required('#boss-hud');
 const bossHealth = required<HTMLProgressElement>('#boss-health');
 const bossLabel = required('#boss-label');
-const state = createGame(startAtBoss(import.meta.env.DEV, import.meta.env.MODE));
+const state = createGame(startAtBoss(import.meta.env.DEV, import.meta.env.MODE), startLevel(import.meta.env.DEV, import.meta.env.MODE));
+const levelTitle = required('#level-title');
+const debugTools = required('#debug-tools');
+const debugLevel2 = required<HTMLButtonElement>('#debug-level2');
+const debugAirships = required('#debug-airships');
+debugTools.hidden = !import.meta.env.DEV;
+function enterLevel2() {
+  Object.assign(state, createGame(false, 1));
+  debugLevel2.blur();
+  continueGame();
+}
+debugLevel2.addEventListener('click', enterLevel2);
 const bonusMessages = { spread: 'Trojstřela na 12 sekund', repair: 'Oprava · +1 život', repairScore: 'Plné životy · +150 bodů' };
 const keys = new Set<string>();
 const controls = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
@@ -46,7 +57,8 @@ let disposed = false;
 
 function continueGame() {
   if (document.hidden) return;
-  if (state.status === 'gameOver' || state.status === 'victory') restartGame(state);
+  if (state.status === 'victory' && state.levelIndex === 0) advanceLevel(state);
+  else if (state.status === 'gameOver' || state.status === 'victory') restartGame(state);
   else resumeGame(state);
   keys.clear();
   action.blur();
@@ -95,6 +107,10 @@ function tick(time: number) {
     y: Number(keys.has('ArrowUp') || keys.has('KeyW')) - Number(keys.has('ArrowDown') || keys.has('KeyS')),
     fire: keys.has('Space'),
   }, dt);
+  if (import.meta.env.DEV) {
+    const airships = state.enemies.filter(enemy => enemy.kind === 'airship');
+    debugAirships.textContent = airships.length ? airships.map(enemy => `Vzducholoď #${enemy.id}: ${enemy.hp}/16 · ${enemy.hp < 16 ? 'poškozená' : 'celá'}`).join(' | ') : '';
+  }
   score.textContent = String(state.score).padStart(6, '0');
   lives.textContent = String(state.lives);
   weaponLabel.textContent = state.weaponLeft > 0 ? `Trojstřela · ${Math.ceil(state.weaponLeft)} s` : 'Zbraň · Jeden paprsek';
@@ -105,16 +121,18 @@ function tick(time: number) {
   if (bonusNotice.textContent !== notice) bonusNotice.textContent = notice;
   overlay.hidden = state.status === 'playing';
   const finished = state.status === 'gameOver' || state.status === 'victory';
-  message.textContent = state.status === 'victory' ? 'Úroveň dokončena' : state.status === 'gameOver' ? 'Konec hry' : 'Pauza';
+  message.textContent = state.status === 'victory' ? (state.levelIndex === 0 ? 'Level 1 dokončen' : 'Kampaň dokončena') : state.status === 'gameOver' ? 'Konec hry' : 'Pauza';
   result.textContent = finished ? `${state.score} bodů · Zbývající životy: ${state.lives}` : 'Hra čeká na pokračování.';
-  action.textContent = finished ? 'Nová hra · Enter' : 'Pokračovat · Enter';
-  progress.value = Math.min(1, state.time / LEVEL_DURATION);
-  section.textContent = state.status === 'victory' ? 'Hotovo · Úroveň 1'
+  action.textContent = state.status === 'victory' && state.levelIndex === 0 ? 'Další level · Enter'
+    : finished ? `Znovu level ${state.levelIndex + 1} · Enter` : 'Pokračovat · Enter';
+  levelTitle.textContent = `Level ${state.levelIndex + 1} · ${getLevel(state.levelIndex).name}`;
+  progress.value = Math.min(1, state.time / getLevel(state.levelIndex).duration);
+  section.textContent = state.status === 'victory' ? `Hotovo · Level ${state.levelIndex + 1}`
     : state.missionStage === 'warning' ? 'Varování · Blíží se velitel'
     : state.missionStage === 'bossDestroyed' ? 'Cíl zničen'
     : state.missionStage === 'boss' ? (state.boss?.mode === 'entering' ? 'Boss · Přílet pod štítem'
       : state.boss?.mode === 'transitioning' ? 'Boss · Fáze 2' : `Boss · Fáze ${state.boss?.phase ?? 1}`)
-    : levelPart(state.time);
+    : levelPart(state.time, state.levelIndex);
   bossHud.hidden = !state.boss || state.boss.mode === 'entering' || state.boss.mode === 'destroyed';
   bossHealth.max = state.boss?.maxHp ?? 60;
   bossHealth.value = Math.max(0, state.boss?.hp ?? 0);
@@ -134,6 +152,7 @@ if (import.meta.hot) {
     window.removeEventListener('blur', pause);
     document.removeEventListener('visibilitychange', visibility);
     action.removeEventListener('click', continueGame);
+    debugLevel2.removeEventListener('click', enterLevel2);
     view.dispose();
   });
 }

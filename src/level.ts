@@ -42,7 +42,13 @@ export const LEVEL_EVENTS: readonly SpawnEvent[] = Object.freeze(
   }),
 );
 
-export function levelPart(time: number): string {
+export function levelPart(time: number, index: LevelIndex = 0): string {
+  if (index === 1) {
+    if (time >= getLevel(1).duration) return 'Dokonči souboj';
+    if (time >= 32) return '3 / 3 · Těžký konvoj';
+    if (time >= 16) return '2 / 3 · Doprovod';
+    return '1 / 3 · První vzducholoď';
+  }
   if (time >= LEVEL_DURATION) return 'Dokonči souboj';
   if (time >= 35) return '3 / 3 · Útočná flotila';
   if (time >= 15) return '2 / 3 · Salvy a vějíře';
@@ -54,3 +60,32 @@ export const GROUND_TARGETS: readonly Readonly<{ x: number; levelY: number }>[] 
   Object.freeze({ x: 4, levelY: 117 }),  // 26. sekunda
   Object.freeze({ x: 0, levelY: 185 }),  // 43. sekunda
 ]);
+
+export type LevelIndex = 0 | 1;
+export type LevelDefinition = Readonly<{
+  name: string; duration: number; events: readonly SpawnEvent[];
+  groundTargets: readonly Readonly<{ x: number; levelY: number }>[]; boss: boolean;
+}>;
+const convoy: SpawnEvent[] = [];
+const escort = (at: number, kind: EnemyKind, xs: number[], drop?: PickupKind) => {
+  xs.forEach(x => convoy.push({ at, kind, x, y: kind === 'airship' ? 18 : 13, drop }));
+};
+escort(1, 'airship', [0], 'spread');
+escort(4, 'scout', [-6, 6]);
+escort(8, 'interceptor', [-5, 5]);
+escort(12, 'scout', [-4, 0, 4], 'repair');
+escort(16, 'airship', [-3.5], 'spread');
+escort(19, 'gunner', [5]);
+escort(23, 'spreader', [-5, 5]);
+escort(27, 'interceptor', [-5, 0, 5]);
+escort(30, 'scout', [-4, 0, 4], 'repair');
+escort(34, 'airship', [-3.5, 3.5]);
+escort(38, 'pulsar', [0]);
+escort(41, 'interceptor', [-5, 5]);
+export const LEVELS: readonly LevelDefinition[] = Object.freeze([
+  Object.freeze({ name: 'Základna', duration: LEVEL_DURATION, events: LEVEL_EVENTS, groundTargets: GROUND_TARGETS, boss: true }),
+  Object.freeze({ name: 'Vzdušný konvoj', duration: 48,
+    events: Object.freeze(convoy.sort((a, b) => a.at - b.at).map(event => Object.freeze(event))),
+    groundTargets: Object.freeze([]), boss: false }),
+]);
+export function getLevel(index: LevelIndex): LevelDefinition { return LEVELS[index]!; }
