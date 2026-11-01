@@ -21,6 +21,7 @@ používá sprite kanóny z `newshs` a mění dočasný bonus na jedno dělo nav
 [Fáze 18](faze18.md) skládá fialové Bastiony ze dvou samostatně zničitelných dílů.
 [Fáze 19](faze19.md) přidává další dva typy pozemních kanónů s dvojitou
 palbou a rozstřelitelné padající kameny z `newshd` bez bodové odměny.
+[Fáze 20](faze20.md) nahrazuje prvnímu bossovi 3D trup velkou lodí z `newsh8`.
 
 ## Spuštění
 
@@ -87,7 +88,7 @@ souboj s jeho bossem: `npm run dev:boss4`. Produkční hra vždy začíná level
 - `src/fortress-boss.ts` – tři útoky a dvě fáze finálního bosse.
 - `src/fortress-boss-model.ts` – trup newsho, světla hlavní a příletový štít.
 - `src/boss.ts` – pravidla souboje a útoků.
-- `src/boss-model.ts` – 3D model a vizuální signalizace.
+- `src/boss-model.ts` – sprite prvního bosse z newsh8 a vizuální signalizace.
 - `src/start-mode.ts` – vývojové vstupy do jednotlivých misí a soubojů.
 - `src/enemies.ts` – typy nepřátel, pohyb a vzory střelby.
 - `src/bonuses.ts` – bonusy, opravy a dočasná trojstřela.

@@ -1,6 +1,6 @@
 # Tyrian FX atlas
 
-`tyrian-fx.png` je připravený RGBA atlas 512 × 512 px (118 snímků).
+`tyrian-fx.png` je připravený RGBA atlas 512 × 1024 px (119 snímků).
 Vznikl z těchto souborů přidaných do repozitáře:
 
 - `Remastered Tyrian Graphics/newsh6.shp.000000.png`
@@ -15,6 +15,7 @@ Vznikl z těchto souborů přidaných do repozitáře:
 - `Remastered Tyrian Graphics/newsh4.shp.000000.png`
 - `Remastered Tyrian Graphics/newshs.shp.000000.png`
 - `Remastered Tyrian Graphics/newshd.shp.000000.png`
+- `Remastered Tyrian Graphics/newsh8.shp.000000.png`
 
 Výřezy a animační klipy: `src/sprite-clips.ts`.
 Odstraněná barva pozadí: RGB (191, 220, 191), bez odstraňování jiných barev.
@@ -62,5 +63,10 @@ má vlastní zdraví; detaily jsou ve `faze18.md`.
 List `newshd` přidává dva typy dvojitých kanónů (`twinSteelCannon`,
 `twinGoldCannon`, po třech snímcích) a dva padající kameny (`smallRock`,
 `largeRock`, po jednom snímku). Kanóny používají spodní volné buňky
-od (320, 480), kameny buňky (480, 192) a (416, 224). Rozměr atlasu
-zůstává 512 × 512 px. Výřezy a pravidla popisuje `faze19.md`.
+od (320, 480), kameny buňky (480, 192) a (416, 224). Tyto výřezy zůstávají v horních 512 řádcích atlasu. Výřezy a pravidla popisuje `faze19.md`.
+
+První boss používá klip `commanderBoss` ze zdroje `newsh8`: celý výřez
+(0, 28, 72, 56), tedy velkou loď pod horní čtveřicí malých lodí vlevo.
+Má oblast 96 × 64 px na (0, 512). Kvůli ní atlas narostl na 512 × 1024 px;
+polohy předchozích výřezů zůstávají stejné a normalizované UV se přepočítají
+podle nového rozměru. Více ve `faze20.md`.

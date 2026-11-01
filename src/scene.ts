@@ -38,7 +38,7 @@ export async function createScene(container: HTMLElement) {
   scene.add(light);
 
   const terrain = createTerrain(scene);
-  const bossModel = createBossModel(scene);
+  const bossModel = createBossModel(scene, sprites);
   const dreadnoughtBossModel = createDreadnoughtBossModel(scene, sprites);
   const fortressBossModel = createFortressBossModel(scene, sprites);
   const convoyBossModel = createConvoyBossModel(scene, sprites);

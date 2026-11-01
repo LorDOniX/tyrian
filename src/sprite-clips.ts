@@ -2,7 +2,7 @@ import { PLAYER_SHIP_CLIPS } from './player-ships.ts';
 
 // Výřezy zdrojů jsou v pixelech od levého horního rohu, indexované od nuly.
 // Malé snímky mají buňky 32 × 32, velké trupy vlastní obdélníkové oblasti.
-export const ATLAS = { width: 512, height: 512, cell: 32, columns: 16 } as const;
+export const ATLAS = { width: 512, height: 1024, cell: 32, columns: 16 } as const;
 const fx = 'newsh6.shp.000000.png';
 const weapons = 'newsh(.shp.000000.png';
 const row = (source: string, y: number, columns: number[]) =>
@@ -14,6 +14,8 @@ const shipFrames = (y: number) => [0, 48, 96].map(x => ({
 
 export const SPRITE_CLIPS = {
   ...PLAYER_SHIP_CLIPS,
+  commanderBoss: { start: 118, fps: 1, loop: true, size: 4.4, width: 1.5, referenceCell: 32,
+    frames: [{ source: 'newsh8.shp.000000.png', x: 0, y: 28, width: 72, height: 56 }] },
   smallRock: { start: 116, fps: 1, loop: true, size: 1.8, width: 1, referenceCell: 32,
     frames: [{ source: 'newshd.shp.000000.png', x: 48, y: 0, width: 24, height: 28 }] },
   largeRock: { start: 117, fps: 1, loop: true, size: 3, width: 1, referenceCell: 32,
@@ -84,6 +86,7 @@ export function spriteFrame(name: SpriteClip, age: number): number | null {
 
 // Velké trupy mají vlastní obdélníky pod řadami malých snímků.
 export function atlasRegion(index: number) {
+  if (index === 118) return { x: 0, y: 512, width: 96, height: 64 };
   if (index === 116) return { x: 480, y: 192, width: 32, height: 32 };
   if (index === 117) return { x: 416, y: 224, width: 32, height: 32 };
   if (index >= 110 && index <= 115) return { x: 320 + (index - 110) * 32, y: 480, width: 32, height: 32 };
