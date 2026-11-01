@@ -1,7 +1,9 @@
+import { freshUpgrades, maxShield, maxLives, weaponCooldown, upgradeCost } from './upgrades.ts';
+import type { Upgrades, UpgradeKind } from './upgrades.ts';
 import { createEnemy, updateEnemy, enemyVolley, ENEMY_TYPES, enemyCircles, enemyExtent } from './enemies.ts';
 import type { Enemy } from './enemies.ts';
 export type { Enemy } from './enemies.ts';
-import { createPickup, updateBonuses, playerVolley, MAX_LIVES } from './bonuses.ts';
+import { createPickup, updateBonuses, playerVolley } from './bonuses.ts';
 import type { BonusState } from './bonuses.ts';
 import { clipDuration } from './sprite-clips.ts';
 import type { EffectKind } from './sprite-clips.ts';
@@ -26,6 +28,8 @@ export type Input = { x: number; y: number; fire: boolean };
 export type Effect = { id: number; x: number; y: number; age: number; kind: EffectKind; scale: number };
 export type GameState = BonusState & {
   levelIndex: LevelIndex; checkpointScore: number;
+  credits: number; checkpointCredits: number; upgrades: Upgrades;
+  shield: number; shieldRegenDelay: number; shieldHitLeft: number;
   missionStage: 'waves' | 'warning' | 'boss' | 'bossDestroyed' | 'departing';
   departure: { startY: number; elapsed: number } | null;
   stageTimer: number; boss: Boss | null;
@@ -36,13 +40,15 @@ export type GameState = BonusState & {
   player: Body; groundTargets: GroundTarget[]; wrecks: Wreck[]; enemies: Enemy[]; bullets: Bullet[]; effects: Effect[];
 };
 
-export function createGame(startAtBoss = false, levelIndex: LevelIndex = 0): GameState {
+export function createGame(startAtBoss = false, levelIndex: LevelIndex = 0, upgrades: Upgrades = freshUpgrades()): GameState {
   const level = getLevel(levelIndex);
   startAtBoss = startAtBoss && level.boss;
   return {
     levelIndex, checkpointScore: 0, departure: null,
+    credits: 0, checkpointCredits: 0, upgrades: { ...upgrades },
+    shield: maxShield(upgrades), shieldRegenDelay: 0, shieldHitLeft: 0,
     missionStage: startAtBoss ? 'warning' : 'waves', stageTimer: startAtBoss ? 1.5 : 0, boss: null,
-    status: 'playing', score: 0, lives: MAX_LIVES,
+    status: 'playing', score: 0, lives: maxLives(upgrades),
     pickups: [], weaponLeft: 0, bonusNotice: null, noticeLeft: 0, time: startAtBoss ? level.duration : 0,
     scrollDistance: startAtBoss ? level.duration * SCROLL_SPEED : 0, nextGround: startAtBoss ? level.groundTargets.length : 0,
     nextEvent: startAtBoss ? level.events.length : 0, invulnerabilityLeft: 0, cooldown: 0, nextId: 1, tilt: 0,
@@ -51,14 +57,37 @@ export function createGame(startAtBoss = false, levelIndex: LevelIndex = 0): Gam
   };
 }
 export function restartGame(state: GameState): void {
-  const { levelIndex, checkpointScore } = state;
-  Object.assign(state, createGame(false, levelIndex), { score: checkpointScore, checkpointScore });
+  const { levelIndex, checkpointScore, checkpointCredits, upgrades } = state;
+  Object.assign(state, createGame(false, levelIndex, upgrades), {
+    score: checkpointScore, checkpointScore, credits: checkpointCredits, checkpointCredits,
+  });
 }
 export function advanceLevel(state: GameState): void {
   if (state.status !== 'victory' || !hasNextLevel(state.levelIndex)) return;
   const checkpointScore = state.score;
-  Object.assign(state, createGame(false, (state.levelIndex + 1) as LevelIndex), { score: checkpointScore, checkpointScore });
+  const checkpointCredits = state.credits;
+  Object.assign(state, createGame(false, (state.levelIndex + 1) as LevelIndex, state.upgrades), {
+    score: checkpointScore, checkpointScore, credits: checkpointCredits, checkpointCredits,
+  });
 }
+// Opakování poslední dokončené mise začíná s právě nakoupenou výbavou i zůstatkem.
+export function replayCompletedLevel(state: GameState): void {
+  if (state.status !== 'victory') return;
+  state.checkpointScore = state.score;
+  state.checkpointCredits = state.credits;
+  restartGame(state);
+}
+export function buyUpgrade(state: GameState, kind: UpgradeKind): boolean {
+  const cost = upgradeCost(state.upgrades, kind);
+  if (state.status !== 'victory' || cost === null || state.credits < cost) return false;
+  state.credits -= cost;
+  state.upgrades[kind]++;
+  if (kind === 'shield') state.shield = maxShield(state.upgrades);
+  if (kind === 'hull') state.lives = maxLives(state.upgrades);
+  return true;
+}
+export const SHIELD_REGEN_DELAY = 3;
+export const SHIELD_REGEN_RATE = 1;
 export const DEPARTURE_DURATION = 2.2;
 export const DEPARTURE_END_Y = WORLD_HEIGHT / 2 + 6;
 
@@ -84,7 +113,7 @@ export function aimVelocity(from: { x: number; y: number }, target: { x: number;
 }
 function makeBullet(state: GameState, x: number, y: number, owner: Bullet['owner'], vx: number, vy: number): Bullet {
   return { id: state.nextId++, x, y, previousX: x, previousY: y,
-    radius: owner === 'player' ? 0.09 : 0.22, owner, vx, vy, speed: Math.hypot(vx, vy) };
+    radius: owner === 'player' ? 0.065 : 0.22, owner, vx, vy, speed: Math.hypot(vx, vy) };
 }
 
 export function updateGame(state: GameState, input: Input, elapsed: number): void {
@@ -96,6 +125,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   if (state.status !== 'playing') return;
   if (state.lives <= 0) { state.status = 'gameOver'; return; }
   const level = getLevel(state.levelIndex);
+  const scoreBefore = state.score;
   state.time += dt;
   // Závěrečný průlet má vlastní pohyb mimo běžné hranice a kolize.
   if (state.missionStage === 'departing' && state.departure) {
@@ -140,6 +170,10 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     wreck.y = wreck.levelY - state.scrollDistance;
     return wreck.y >= -13;
   });
+  state.shieldHitLeft = Math.max(0, state.shieldHitLeft - dt);
+  const rechargeTime = Math.max(0, dt - state.shieldRegenDelay);
+  state.shieldRegenDelay = Math.max(0, state.shieldRegenDelay - dt);
+  state.shield = Math.min(maxShield(state.upgrades), state.shield + rechargeTime * SHIELD_REGEN_RATE);
   state.invulnerabilityLeft = Math.max(0, state.invulnerabilityLeft - dt);
   state.cooldown = Math.max(0, state.cooldown - dt);
   const length = Math.hypot(input.x, input.y);
@@ -165,10 +199,10 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   const pendingBossShots = state.boss ? updateBoss(state.boss, dt, player) : [];
   if (input.fire && state.cooldown === 0) {
-    for (const shot of playerVolley(state.weaponLeft > 0)) {
+    for (const shot of playerVolley(state.weaponLeft > 0, state.upgrades.weapon)) {
       state.bullets.push(makeBullet(state, player.x + shot.offsetX, player.y + 1.1, 'player', shot.vx, shot.vy));
     }
-    state.cooldown = 0.14;
+    state.cooldown = weaponCooldown(state.upgrades);
   }
   while (state.nextEvent < level.events.length && level.events[state.nextEvent]!.at <= state.time) {
     const event = level.events[state.nextEvent++]!;
@@ -248,8 +282,15 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   const damagePlayer = () => {
     if (state.invulnerabilityLeft > 0) return;
-    state.lives--;
-    effect(state.lives === 0 ? 'explosion' : 'impact', player.x, player.y, state.lives === 0 ? 1 : 1.5);
+    state.shieldRegenDelay = SHIELD_REGEN_DELAY;
+    if (state.shield > 0) {
+      state.shield = Math.max(0, state.shield - 1);
+      state.shieldHitLeft = 0.3;
+      effect('shield', player.x, player.y, 1.8);
+    } else {
+      state.lives--;
+      effect(state.lives === 0 ? 'explosion' : 'impact', player.x, player.y, state.lives === 0 ? 1 : 1.5);
+    }
     state.invulnerabilityLeft = 1;
   };
   // Všechny dotýkající se střely se spotřebují, i během ochrany hráče.
@@ -309,4 +350,5 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       beginLevelDeparture(state);
     }
   }
+  state.credits += Math.max(0, state.score - scoreBefore);
 }

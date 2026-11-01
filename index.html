@@ -10,7 +10,7 @@
     <main id="app" aria-label="Vesmírná loď – ovládání šipkami nebo WASD a střelba mezerníkem"></main>
     <aside class="info">
       <h1 id="level-title">Level 1 · Základna</h1>
-      <p class="stats">Skóre <strong id="score">000000</strong> · Životy <strong id="lives">3</strong></p>
+      <p class="stats">Skóre <strong id="score">000000</strong></p>
       <p id="section">1 / 3 · Formace</p>
       <progress id="progress" max="1" value="0" aria-label="Průběh úrovně"></progress>
       <p id="weapon-label">Zbraň · Jeden paprsek</p>
@@ -19,11 +19,21 @@
       <p id="bonus-notice" role="status" aria-live="polite"></p>
       <p>WASD / šipky: pohyb · Mezerník: střelba · Esc: pauza</p>
     </aside>
+    <aside class="ship-hud" aria-label="Stav lodi">
+      <p class="hud-title">SYSTÉMY LODI</p>
+      <div class="hud-row"><span>ŠTÍT</span><strong id="shield-value">6 / 6</strong></div>
+      <progress id="shield-meter" max="6" value="6" aria-label="Štít"></progress>
+      <p id="shield-status">Štít připraven</p>
+      <div class="hud-row"><span>ŽIVOTY</span><strong id="lives">3 / 3</strong></div>
+      <progress id="hull-meter" max="3" value="3" aria-label="Životy lodi"></progress>
+      <div class="hud-row credits-row"><span>KREDITY</span><strong id="credits">0</strong></div>
+      <p id="equipment">Výzbroj 1 · Štít 1 · Trup 1</p>
+    </aside>
     <aside id="boss-hud" class="boss-hud" hidden>
       <p id="boss-label">Velitel · 60 / 60</p>
       <progress id="boss-health" max="60" value="60" aria-label="Životy bosse"></progress>
     </aside>
-    <div id="debug-tools" class="debug-tools" hidden><button id="debug-level2" type="button">Debug: start levelu 2</button> <button id="debug-boss2" type="button">Debug: boss levelu 2</button><button id="debug-level3" type="button">Debug: start levelu 3</button> <button id="debug-boss3" type="button">Debug: boss levelu 3</button><button id="debug-departure" type="button">Debug: odlet</button><p id="debug-airships"></p></div>
+    <div id="debug-tools" class="debug-tools" hidden><button id="debug-level2" type="button">Debug: start levelu 2</button> <button id="debug-boss2" type="button">Debug: boss levelu 2</button><button id="debug-level3" type="button">Debug: start levelu 3</button> <button id="debug-boss3" type="button">Debug: boss levelu 3</button><button id="debug-departure" type="button">Debug: odlet</button><button id="debug-shop" type="button">Debug: hangár</button><p id="debug-airships"></p></div>
     <button id="ship-choice" class="ship-choice" type="button">Loď: Stříbrná</button>
     <dialog id="ship-picker" aria-labelledby="ship-picker-title">
       <h2 id="ship-picker-title">Vyber loď</h2>
@@ -34,7 +44,15 @@
     <label class="terrain-toggle"><input id="terrain" type="checkbox" checked /> Terén</label>
     <label class="debug"><input id="debug" type="checkbox" /> Kolizní kruhy</label>
     <section id="overlay" class="overlay" hidden aria-label="Stav hry">
-      <div><h2 id="message">Pauza</h2><p id="result"></p><button id="action" type="button">Pokračovat · Enter</button></div>
+      <div><h2 id="message">Pauza</h2><p id="result"></p>
+        <section id="shop" hidden aria-labelledby="shop-title">
+          <h3 id="shop-title">Hangár · Vylepšení lodi</h3>
+          <p id="shop-help">Nakup za kredity ze získaných bodů. Příští mise začíná s plnými štíty a životy.</p>
+          <p class="shop-balance">K dispozici <strong id="shop-credits">0</strong> kreditů</p>
+          <div id="shop-options" class="shop-options"></div>
+          <p id="shop-notice" role="status" aria-live="polite"></p>
+        </section>
+        <button id="action" type="button">Pokračovat · Enter</button></div>
     </section>
     <script type="module" src="/src/main.ts"></script>
   </body>

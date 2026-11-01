@@ -65,3 +65,44 @@ progress { width: min(18rem, 70vw); height: 0.4rem; accent-color: #38bdf8; }
 .ship-options button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 7rem; padding: 0.5rem; background: #1e293b; color: #e2e8f0; border: 2px solid #334155; font-size: 0.85rem; }
 .ship-options button[aria-pressed="true"] { border-color: #38bdf8; background: #16405b; }
 .ship-preview { display: block; background-repeat: no-repeat; image-rendering: pixelated; margin-bottom: 0.4rem; }
+
+/* Přístrojový panel: oddělená energie štítu, trup a rozpočet hangáru. */
+.ship-hud { position: fixed; top: 6.5rem; right: 1rem; width: 14rem; padding: 1rem; border: 1px solid #4e6172; border-left: 3px solid #5a879c; background: linear-gradient(135deg, #203345f0, #0c1523f0); box-shadow: inset 0 0 0 3px #0b1421, 0 8px 28px #0005; font-variant-numeric: tabular-nums; pointer-events: none; }
+.ship-hud .hud-title { color: #93b2c7; font-size: 0.7rem; letter-spacing: 0.18em; margin: 0 0 1rem; }
+.hud-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #a6bfd1; }
+.hud-row strong { color: #e0f2fe; font-size: 1rem; }
+.ship-hud progress { display: block; width: 100%; height: 0.8rem; margin: 0.4rem 0 0; border: 1px solid #0b1421; appearance: none; }
+.ship-hud progress::-webkit-progress-bar { background: #070d17; }
+#shield-meter::-webkit-progress-value { background: repeating-linear-gradient(90deg, #67e8f9 0 10px, #26798b 10px 12px, #080f1b 12px 14px); }
+#hull-meter::-webkit-progress-value { background: repeating-linear-gradient(90deg, #fca5a5 0 10px, #b45262 10px 12px, #080f1b 12px 14px); }
+#shield-meter::-moz-progress-bar { background: #67e8f9; }
+#hull-meter::-moz-progress-bar { background: #fca5a5; }
+#shield-status { min-height: 1em; margin: 0.3rem 0 1rem; color: #67e8f9; font-size: 0.7rem; }
+.credits-row { margin-top: 1.1rem; padding-top: 0.7rem; border-top: 1px solid #395065; }
+.credits-row strong { color: #fcd34d; }
+#equipment { font-size: 0.65rem; color: #94a3b8; margin-bottom: 0; }
+.overlay > div { max-height: calc(100dvh - 2rem); max-width: min(48rem, calc(100vw - 2rem)); overflow-y: auto; }
+#shop { border-top: 1px solid #334155; margin: 1.2rem 0; padding-top: 0.4rem; }
+#shop[hidden] { display: none; }
+#shop h3 { color: #bae6fd; }
+#shop-help { color: #94a3b8; font-size: 0.85rem; max-width: 36rem; }
+.shop-balance { color: #fde68a; }
+.shop-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; margin: 1rem 0; }
+.shop-options article { padding: 1rem; background: #1a2b3b; border: 1px solid #3b5269; border-radius: 0.5rem; display: flex; flex-direction: column; }
+.shop-options h4 { margin: 0 0 0.6rem; color: #e0f2fe; }
+.shop-options p { color: #a3b4cc; font-size: 0.8rem; flex: 1; }
+.shop-options button { font-size: 0.8rem; padding: 0.65rem; }
+button:disabled { background: #334155; color: #8294a8; cursor: default; }
+#shop-notice { min-height: 1.1em; color: #86efac; font-size: 0.85rem; }
+@media (max-width: 900px) {
+  .ship-hud { top: auto; bottom: 1rem; width: 11rem; padding: 0.7rem; }
+  .ship-hud .hud-title, #equipment { display: none; }
+  .ship-hud .credits-row { margin-top: 0.6rem; }
+  .boss-hud { top: 1rem; bottom: auto; }
+}
+@media (max-width: 560px) {
+  .shop-options { grid-template-columns: 1fr; }
+  .overlay > div { padding: 1rem; }
+  .info h1 { font-size: 1.1rem; }
+  .boss-hud { top: 18rem; }
+}

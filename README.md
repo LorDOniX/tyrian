@@ -11,6 +11,8 @@ přidává sbíratelnou opravu a dočasnou trojstřelu. [Fáze 8](faze8.md) měn
 lodě na Tyrian sprity a rozšiřuje flotilu na 50 lodí pěti typů. [Fáze 9](faze9.md)
 přidává druhý level se vzducholoděmi, poškozenými variantami trupu a debug startem.
 [Fáze 10](faze10.md) ho zakončuje sprite bossem z `newsht.shp.000000.png`. [Fáze 11](faze11.md) přidává třetí level Ocelová pevnost, dva nové typy lodí a finálního bosse z `newsho.shp.000000.png`. Zachovává 3 životy, skóre, pauzu a restart.
+[Fáze 12](faze12.md) přidává odlet a sedm vzhledů hráče. [Fáze 13](faze13.md)
+přidává obnovitelné štíty, panel systémů a hangár s nákupem výzbroje, štítu a trupu.
 
 ## Spuštění
 
@@ -20,6 +22,12 @@ npm run dev
 ```
 
 Šipky / WASD: pohyb. Mezerník: střelba. Esc: pauza. Enter: pokračování / restart.
+Základní loď má 6 bodů štítu a 3 životy. Po 3 sekundách bez zásahu se štít
+obnovuje rychlostí 1 bod za sekundu. Při nulovém štítu zásahy ubírají životy;
+ztráta posledního života znamená konec hry. Skóre zároveň přidává kredity.
+Po každé vítězné misi lze v hangáru koupit dvě úrovně výzbroje, štítu a trupu.
+Výbava i zůstatek přecházejí do další mise; po prohře se rozpočet vrací na
+začátek aktuální mise. Další mise začíná s plnou ochranou podle zakoupené výbavy.
 Po zničení bosse každého levelu loď automaticky zrychlí nahoru a odletí
 za horní okraj. Až poté se zobrazí výsledek mise. Ve vývoji lze animaci
 zkusit tlačítkem „Debug: odlet“. Tlačítko „Loď: …“ otevře výběr sedmi vzhledů z `tyrian.shp.007D3C.png`
@@ -43,6 +51,7 @@ Třetí level lze spustit přímo příkazem `npm run dev:level3`, jeho bosse `n
 - `npm run dev:level3` – vývojový start ve třetím levelu.
 - `npm run dev:boss3` – vývojový start před bossem třetího levelu.
 - `npm run dev:boss2` – vývojový start přímo před bossem druhého levelu.
+- `npm run dev:shop` – vývojový náhled hangáru s 9 000 kredity.
 - `npm run assets:prepare` – volitelné obnovení sprite atlasu ze zdrojů (vyžaduje FFmpeg).
 - `npm test` – testy kolizí a herních pravidel.
 - `npm run typecheck` – kontrola typů.
@@ -52,6 +61,7 @@ Třetí level lze spustit přímo příkazem `npm run dev:level3`, jeho bosse `n
 ## Soubory
 
 - `src/main.ts` – vstup aplikace a úklid při HMR.
+- `src/upgrades.ts` – stupně výzbroje, štítu a trupu a ceny v hangáru.
 - `src/level.ts` – časované formace a části úrovně.
 - `src/convoy-boss.ts` – pravidla a útoky admirála konvoje.
 - `src/convoy-boss-model.ts` – sprite model, rozsvícené hlavně a štít.

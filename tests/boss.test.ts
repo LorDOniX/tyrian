@@ -97,6 +97,7 @@ test('phase two waits for current salvo and switches once, retaining attack spee
 });
 test('boss contact costs one life with protection, boss does not vanish', () => {
   const state = combat();
+  state.shield = 0; state.shieldRegenDelay = 100;
   state.player.y = 7;
   updateGame(state, idle, 0.05);
   assert.equal(state.lives, 2);

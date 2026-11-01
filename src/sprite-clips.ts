@@ -35,7 +35,7 @@ export const SPRITE_CLIPS = {
     frames: row(fx, 6, [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]) },
   impact: { start: 13, fps: 35, loop: false, size: 1.15, width: 1, referenceCell: 16,
     frames: row(fx, 5, [6, 7, 8, 9, 10]) },
-  playerShot: { start: 18, fps: 12, loop: true, size: 1, width: 0.35, referenceCell: 16,
+  playerShot: { start: 18, fps: 12, loop: true, size: 0.75, width: 0.28, referenceCell: 16,
     frames: row(weapons, 13, [17]) },
   enemyShot: { start: 19, fps: 10, loop: true, size: 0.85, width: 1, referenceCell: 16,
     frames: row(weapons, 8, [15, 16]) },

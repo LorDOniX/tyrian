@@ -36,6 +36,7 @@ test('fast bullet hits nearest enemy independent of array order, scores once', (
 });
 test('simultaneous contacts cost one life, protection expires', () => {
   const state = createGame();
+  state.shield = 0; state.shieldRegenDelay = 100;
   state.enemies = [body(2, 0, -7), body(3, 0, -7)];
   updateGame(state, idle, 0.01);
   assert.equal(state.lives, 2);
@@ -55,6 +56,7 @@ test('shot enemy cannot damage player in same step; offscreen cleanup', () => {
 });
 test('game over freezes simulation, restart resets all state', () => {
   const state = createGame();
+  state.shield = 0; state.shieldRegenDelay = 100;
   state.lives = 1;
   state.enemies = [body(2, 0, -7)];
   updateGame(state, idle, 0.05);

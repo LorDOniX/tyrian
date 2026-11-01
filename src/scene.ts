@@ -1,3 +1,4 @@
+import { maxShield } from './upgrades.ts';
 import { DEFAULT_PLAYER_SHIP, playerShipPose } from './player-ships.ts';
 import { PICKUP_SCALE } from './bonuses.ts';
 import type { PlayerShipId } from './player-ships.ts';
@@ -44,6 +45,12 @@ export async function createScene(container: HTMLElement) {
   const hull = sprites.create(DEFAULT_PLAYER_SHIP);
   hull.renderOrder = 9;
   ship.add(hull);
+  const shieldMaterial = new THREE.MeshBasicMaterial({ color: '#67e8f9', transparent: true,
+    opacity: 0.2, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+  const playerShield = new THREE.Mesh(new THREE.RingGeometry(1.03, 1.08, 48), shieldMaterial);
+  playerShield.scale.y = 1.2;
+  playerShield.renderOrder = 8;
+  ship.add(playerShield);
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7, 8),
     new THREE.MeshBasicMaterial({ color: '#fb923c' }));
   flame.rotation.z = Math.PI;
@@ -140,6 +147,9 @@ export async function createScene(container: HTMLElement) {
     const departing = state.missionStage === 'departing';
     ship.visible = state.status !== 'gameOver' && !(departing && state.status === 'victory') &&
       (state.invulnerabilityLeft === 0 || Math.floor(state.time * 12) % 2 === 0);
+    playerShield.visible = !departing && (state.shield > 0 || state.shieldHitLeft > 0);
+    shieldMaterial.opacity = state.shieldHitLeft > 0 ? 0.9 : 0.08 + state.shield / maxShield(state.upgrades) * 0.2;
+    shieldMaterial.color.set(state.shield === 0 ? '#fb7185' : '#67e8f9');
     const boost = departing ? Math.min(1, (state.departure?.elapsed ?? 0) / 0.5) : 0;
     const exhaustLength = (0.85 + Math.sin(state.time * 25) * 0.15) * (1 + boost * 4);
     flame.scale.set(1 + boost * 0.4, exhaustLength, 1 + boost * 0.4);

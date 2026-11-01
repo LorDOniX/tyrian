@@ -141,6 +141,7 @@ test('missed rewards disappear, never block boss warning or revive dead player',
 });
 test('repair is collected before hostile damage in the same step', () => {
   const state = only();
+  state.shield = 0; state.shieldRegenDelay = 100;
   state.lives = 1;
   state.pickups = [createPickup(state.nextId++, 'repair', 0, -7)];
   state.bullets = [{ ...shot(state.nextId++, -6.5), owner: 'enemy', vy: -22 }];

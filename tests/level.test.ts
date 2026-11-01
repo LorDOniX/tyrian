@@ -75,6 +75,7 @@ test('aim speed normalized, same-point fallback, static direction', () => {
 });
 test('hostile sweep hits moving player; simultaneous threats cost one life', () => {
   const state = isolated();
+  state.shield = 0; state.shieldRegenDelay = 100;
   state.enemies = [{ ...enemy(), kind: 'scout', hp: 1, y: -7, speed: 0 }];
   state.bullets = [bullet(91, 0, -6.4, 'enemy'), bullet(92, 0, -6.4, 'enemy')];
   updateGame(state, { x: 1, y: 0, fire: false }, 0.05);
@@ -131,6 +132,7 @@ test('boss warning waits for time, events and threats; player bullets do not blo
 });
 test('defeat wins over completion, restart restores level cursor and hazards', () => {
   const state = isolated();
+  state.shield = 0; state.shieldRegenDelay = 100;
   state.time = LEVEL_DURATION;
   state.lives = 1;
   state.bullets = [bullet(91, 0, -7, 'enemy')];

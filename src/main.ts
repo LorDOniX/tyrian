@@ -1,3 +1,4 @@
+import { UPGRADE_ORDER, UPGRADE_INFO, upgradeCost, maxShield, maxLives, weaponName } from './upgrades.ts';
 import atlasUrl from './assets/tyrian-fx.png?url';
 import { ATLAS, atlasRegion } from './sprite-clips.ts';
 import { PLAYER_SHIPS, PLAYER_SHIP_CLIPS, DEFAULT_PLAYER_SHIP, playerShipPose } from './player-ships.ts';
@@ -7,7 +8,7 @@ import { startAtBoss, startLevel } from './start-mode.ts';
 import './style.css';
 import { getLevel, levelPart, hasNextLevel } from './level.ts';
 import { createScene } from './scene';
-import { createGame, beginLevelDeparture, advanceLevel, pauseGame, restartGame, resumeGame, updateGame } from './game.ts';
+import { createGame, beginLevelDeparture, advanceLevel, buyUpgrade, replayCompletedLevel, pauseGame, restartGame, resumeGame, updateGame } from './game.ts';
 
 function required<T extends HTMLElement>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -26,6 +27,17 @@ for (const node of Array.from(container.childNodes)) {
 }
 const score = required('#score');
 const lives = required('#lives');
+const shieldValue = required('#shield-value');
+const shieldMeter = required<HTMLProgressElement>('#shield-meter');
+const hullMeter = required<HTMLProgressElement>('#hull-meter');
+const shieldStatus = required('#shield-status');
+const credits = required('#credits');
+const equipment = required('#equipment');
+const shop = required('#shop');
+const shopCredits = required('#shop-credits');
+const shopHelp = required('#shop-help');
+const shopOptions = required('#shop-options');
+const shopNotice = required('#shop-notice');
 const progress = required<HTMLProgressElement>('#progress');
 const section = required('#section');
 const result = required('#result');
@@ -53,6 +65,7 @@ const debugAirships = required('#debug-airships');
 const debugLevel3 = required<HTMLButtonElement>('#debug-level3');
 const debugDeparture = required<HTMLButtonElement>('#debug-departure');
 const debugBoss3 = required<HTMLButtonElement>('#debug-boss3');
+const debugShop = required<HTMLButtonElement>('#debug-shop');
 const debugBoss2 = required<HTMLButtonElement>('#debug-boss2');
 debugTools.hidden = !import.meta.env.DEV;
 function enterLevel2() {
@@ -78,6 +91,16 @@ function previewDeparture() {
   continueGame();
 }
 debugDeparture.addEventListener('click', previewDeparture);
+function previewShop() {
+  Object.assign(state, createGame(false, state.levelIndex), {
+    status: 'victory', score: 9000, credits: 9000, missionStage: 'departing',
+  });
+  state.player.y = 18;
+  keys.clear();
+  debugShop.blur();
+}
+debugShop.addEventListener('click', previewShop);
+if (import.meta.env.DEV && import.meta.env.MODE === 'shop') previewShop();
 const bonusMessages = { spread: 'Trojstřela na 12 sekund', repair: 'Oprava · +1 život', repairScore: 'Plné životy · +150 bodů' };
 const keys = new Set<string>();
 const controls = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
@@ -88,8 +111,10 @@ let disposed = false;
 function continueGame() {
   if (document.hidden) return;
   if (state.status === 'victory' && hasNextLevel(state.levelIndex)) advanceLevel(state);
-  else if (state.status === 'gameOver' || state.status === 'victory') restartGame(state);
+  else if (state.status === 'victory') replayCompletedLevel(state);
+  else if (state.status === 'gameOver') restartGame(state);
   else resumeGame(state);
+  shopNotice.textContent = '';
   keys.clear();
   action.blur();
   debugToggle.blur();
@@ -176,6 +201,25 @@ shipPickerClose.addEventListener('click', closeShipPicker);
 shipOptions.addEventListener('click', chooseShip);
 shipPicker.addEventListener('close', finishShipPicker);
 
+const shopCards = UPGRADE_ORDER.map(kind => {
+  const card = document.createElement('article');
+  const title = document.createElement('h4');
+  const description = document.createElement('p');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.upgrade = kind;
+  card.append(title, description, button);
+  shopOptions.append(card);
+  return { kind, title, description, button };
+});
+function purchase(event: Event) {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-upgrade]');
+  const kind = UPGRADE_ORDER.find(kind => kind === button?.dataset.upgrade);
+  if (!kind) return;
+  shopNotice.textContent = buyUpgrade(state, kind) ? `${UPGRADE_INFO[kind].name}: vylepšení zakoupeno.` : 'Nákup není dostupný.';
+}
+shopOptions.addEventListener('click', purchase);
+
 function tick(time: number) {
   if (disposed) return;
   const dt = previousTime === undefined ? 0 : Math.min((time - previousTime) / 1000, 0.05);
@@ -192,8 +236,33 @@ function tick(time: number) {
       : airships.map(enemy => `Vzducholoď #${enemy.id}: ${enemy.hp}/16 · ${enemy.hp < 16 ? 'poškozená' : 'celá'}`).join(' | ');
   }
   score.textContent = String(state.score).padStart(6, '0');
-  lives.textContent = String(state.lives);
-  weaponLabel.textContent = state.weaponLeft > 0 ? `Trojstřela · ${Math.ceil(state.weaponLeft)} s` : 'Zbraň · Jeden paprsek';
+  lives.textContent = `${state.lives} / ${maxLives(state.upgrades)}`;
+  shieldValue.textContent = `${Math.ceil(state.shield)} / ${maxShield(state.upgrades)}`;
+  shieldMeter.max = maxShield(state.upgrades);
+  shieldMeter.value = state.shield;
+  hullMeter.max = maxLives(state.upgrades);
+  hullMeter.value = state.lives;
+  shieldStatus.textContent = state.shield >= maxShield(state.upgrades) ? 'Štít připraven'
+    : state.shieldRegenDelay > 0 ? `Obnova za ${Math.ceil(state.shieldRegenDelay)} s` : 'Obnova štítu…';
+  credits.textContent = state.credits.toLocaleString('cs-CZ');
+  equipment.textContent = `Výzbroj ${state.upgrades.weapon + 1} · Štít ${state.upgrades.shield + 1} · Trup ${state.upgrades.hull + 1}`;
+  shop.hidden = state.status !== 'victory';
+  if (!shop.hidden) {
+    shopCredits.textContent = state.credits.toLocaleString('cs-CZ');
+    shopHelp.textContent = hasNextLevel(state.levelIndex)
+      ? 'Nakup za kredity ze získaných bodů. Příští mise začíná s plnými štíty a životy.'
+      : 'Kampaň dokončena. Nakoupenou výbavu můžeš vyzkoušet při opakování poslední mise.';
+    for (const { kind, title, description, button } of shopCards) {
+      const rank = state.upgrades[kind];
+      const cost = upgradeCost(state.upgrades, kind);
+      title.textContent = `${UPGRADE_INFO[kind].name} · ${rank + 1} / 3`;
+      description.textContent = UPGRADE_INFO[kind].descriptions[rank] ?? 'Maximální vylepšení';
+      button.disabled = cost === null || state.credits < cost;
+      button.textContent = cost === null ? 'Maximum' : `Koupit · ${cost.toLocaleString('cs-CZ')} kr.`;
+      button.setAttribute('aria-label', cost === null ? `${UPGRADE_INFO[kind].name}: maximum` : `Koupit ${UPGRADE_INFO[kind].name} za ${cost} kreditů`);
+    }
+  }
+  weaponLabel.textContent = state.weaponLeft > 0 ? `Trojstřela · ${Math.ceil(state.weaponLeft)} s` : `Zbraň · ${weaponName(state.upgrades)}`;
   weaponTimer.hidden = state.weaponLeft === 0;
   weaponTimer.max = SPREAD_DURATION;
   weaponTimer.value = state.weaponLeft;
@@ -202,7 +271,7 @@ function tick(time: number) {
   overlay.hidden = state.status === 'playing';
   const finished = state.status === 'gameOver' || state.status === 'victory';
   message.textContent = state.status === 'victory' ? (hasNextLevel(state.levelIndex) ? `Level ${state.levelIndex + 1} dokončen` : 'Kampaň dokončena') : state.status === 'gameOver' ? 'Konec hry' : 'Pauza';
-  result.textContent = finished ? `${state.score} bodů · Zbývající životy: ${state.lives}` : 'Hra čeká na pokračování.';
+  result.textContent = finished ? `${state.score} bodů · ${state.credits} kreditů · Životy: ${state.lives}` : 'Hra čeká na pokračování.';
   action.textContent = state.status === 'victory' && hasNextLevel(state.levelIndex) ? 'Další level · Enter'
     : finished ? `Znovu level ${state.levelIndex + 1} · Enter` : 'Pokračovat · Enter';
   levelTitle.textContent = `Level ${state.levelIndex + 1} · ${getLevel(state.levelIndex).name}`;
@@ -238,6 +307,9 @@ if (import.meta.hot) {
     debugBoss3.removeEventListener('click', enterBoss3);
     debugDeparture.removeEventListener('click', previewDeparture);
     debugBoss2.removeEventListener('click', enterBoss2);
+    debugShop.removeEventListener('click', previewShop);
+    shopOptions.removeEventListener('click', purchase);
+    shopOptions.replaceChildren();
     shipChoice.removeEventListener('click', openShipPicker);
     shipPickerClose.removeEventListener('click', closeShipPicker);
     shipOptions.removeEventListener('click', chooseShip);
