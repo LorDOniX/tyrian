@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ATLAS, SPRITE_CLIPS, atlasRegion } from '../src/sprite-clips.ts';
-import { keyedFrame } from './sprite-pixels.ts';
+import { keyedFrame, TYRIAN_BACKGROUND } from './sprite-pixels.ts';
 import type { SourceImage } from './sprite-pixels.ts';
 
 // Volitelný nástroj pro obnovu atlasu. Běžné dev/build používají hotový PNG.
@@ -21,9 +21,9 @@ for (const [name, clip] of Object.entries(SPRITE_CLIPS)) {
       image = { width: 228, height: 224, data: ffmpeg(['-i', source, '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1']) };
       if (image.data.length !== image.width * image.height * 4) throw new Error(`Neočekávaný rozměr ${rect.source}`);
       cache.set(rect.source, image);
-      console.log(`${rect.source}: klíč RGB ${Array.from(image.data.subarray(0, 3)).join(', ')}`);
+      console.log(`${rect.source}: klíč RGB ${TYRIAN_BACKGROUND.join(', ')}`);
     }
-    const pixels = keyedFrame(image, rect, Array.from(image.data.subarray(0, 3)));
+    const pixels = keyedFrame(image, rect, TYRIAN_BACKGROUND);
     if (!pixels.some((value, i) => i % 4 === 3 && value > 0)) throw new Error(`Prázdný snímek ${name} #${offset}`);
     const index = clip.start + offset;
     const region = atlasRegion(index);

@@ -1,4 +1,5 @@
-import { UPGRADE_ORDER, UPGRADE_INFO, upgradeCost, maxShield, maxLives, weaponName } from './upgrades.ts';
+import { bossName } from './boss.ts';
+import { UPGRADE_ORDER, UPGRADE_INFO, upgradeCost, maxShield, maxLives, weaponName, weaponGunCount } from './upgrades.ts';
 import atlasUrl from './assets/tyrian-fx.png?url';
 import { ATLAS, atlasRegion } from './sprite-clips.ts';
 import { PLAYER_SHIPS, PLAYER_SHIP_CLIPS, DEFAULT_PLAYER_SHIP, playerShipPose } from './player-ships.ts';
@@ -65,6 +66,8 @@ const debugAirships = required('#debug-airships');
 const debugLevel3 = required<HTMLButtonElement>('#debug-level3');
 const debugDeparture = required<HTMLButtonElement>('#debug-departure');
 const debugBoss3 = required<HTMLButtonElement>('#debug-boss3');
+const debugLevel4 = required<HTMLButtonElement>('#debug-level4');
+const debugBoss4 = required<HTMLButtonElement>('#debug-boss4');
 const debugShop = required<HTMLButtonElement>('#debug-shop');
 const debugBoss2 = required<HTMLButtonElement>('#debug-boss2');
 debugTools.hidden = !import.meta.env.DEV;
@@ -84,6 +87,10 @@ function enterLevel3() { Object.assign(state, createGame(false, 2)); debugLevel3
 function enterBoss3() { Object.assign(state, createGame(true, 2)); debugBoss3.blur(); continueGame(); }
 debugLevel3.addEventListener('click', enterLevel3);
 debugBoss3.addEventListener('click', enterBoss3);
+function enterLevel4() { Object.assign(state, createGame(false, 3)); debugLevel4.blur(); continueGame(); }
+function enterBoss4() { Object.assign(state, createGame(true, 3)); debugBoss4.blur(); continueGame(); }
+debugLevel4.addEventListener('click', enterLevel4);
+debugBoss4.addEventListener('click', enterBoss4);
 function previewDeparture() {
   Object.assign(state, createGame(false, state.levelIndex));
   beginLevelDeparture(state);
@@ -93,7 +100,7 @@ function previewDeparture() {
 debugDeparture.addEventListener('click', previewDeparture);
 function previewShop() {
   Object.assign(state, createGame(false, state.levelIndex), {
-    status: 'victory', score: 9000, credits: 9000, missionStage: 'departing',
+    status: 'victory', score: 50000, credits: 50000, missionStage: 'departing',
   });
   state.player.y = 18;
   keys.clear();
@@ -101,7 +108,7 @@ function previewShop() {
 }
 debugShop.addEventListener('click', previewShop);
 if (import.meta.env.DEV && import.meta.env.MODE === 'shop') previewShop();
-const bonusMessages = { spread: 'Trojstřela na 12 sekund', repair: 'Oprava · +1 život', repairScore: 'Plné životy · +150 bodů' };
+const bonusMessages = { spread: '+1 dělo na 12 sekund · maximálně 5', repair: 'Oprava · +1 život', repairScore: 'Plné životy · +150 bodů' };
 const keys = new Set<string>();
 const controls = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
 let previousTime: number | undefined;
@@ -243,9 +250,9 @@ function tick(time: number) {
   hullMeter.max = maxLives(state.upgrades);
   hullMeter.value = state.lives;
   shieldStatus.textContent = state.shield >= maxShield(state.upgrades) ? 'Štít připraven'
-    : state.shieldRegenDelay > 0 ? `Obnova za ${Math.ceil(state.shieldRegenDelay)} s` : 'Obnova štítu…';
+    : state.lives === 0 ? 'Loď zničena' : 'Obnova při ztrátě života';
   credits.textContent = state.credits.toLocaleString('cs-CZ');
-  equipment.textContent = `Výzbroj ${state.upgrades.weapon + 1} · Štít ${state.upgrades.shield + 1} · Trup ${state.upgrades.hull + 1}`;
+  equipment.textContent = `Děla ${state.upgrades.weapon + 1} / 5 · Štít ${state.upgrades.shield + 1} · Trup ${state.upgrades.hull + 1}`;
   shop.hidden = state.status !== 'victory';
   if (!shop.hidden) {
     shopCredits.textContent = state.credits.toLocaleString('cs-CZ');
@@ -255,14 +262,14 @@ function tick(time: number) {
     for (const { kind, title, description, button } of shopCards) {
       const rank = state.upgrades[kind];
       const cost = upgradeCost(state.upgrades, kind);
-      title.textContent = `${UPGRADE_INFO[kind].name} · ${rank + 1} / 3`;
+      title.textContent = `${UPGRADE_INFO[kind].name} · ${rank + 1} / ${UPGRADE_INFO[kind].costs.length + 1}`;
       description.textContent = UPGRADE_INFO[kind].descriptions[rank] ?? 'Maximální vylepšení';
       button.disabled = cost === null || state.credits < cost;
       button.textContent = cost === null ? 'Maximum' : `Koupit · ${cost.toLocaleString('cs-CZ')} kr.`;
       button.setAttribute('aria-label', cost === null ? `${UPGRADE_INFO[kind].name}: maximum` : `Koupit ${UPGRADE_INFO[kind].name} za ${cost} kreditů`);
     }
   }
-  weaponLabel.textContent = state.weaponLeft > 0 ? `Trojstřela · ${Math.ceil(state.weaponLeft)} s` : `Zbraň · ${weaponName(state.upgrades)}`;
+  weaponLabel.textContent = state.weaponLeft > 0 ? `Posila · ${weaponGunCount(state.upgrades.weapon, true)} děl · ${Math.ceil(state.weaponLeft)} s` : `Zbraň · ${weaponName(state.upgrades)}`;
   weaponTimer.hidden = state.weaponLeft === 0;
   weaponTimer.max = SPREAD_DURATION;
   weaponTimer.value = state.weaponLeft;
@@ -277,7 +284,7 @@ function tick(time: number) {
   levelTitle.textContent = `Level ${state.levelIndex + 1} · ${getLevel(state.levelIndex).name}`;
   progress.value = Math.min(1, state.time / getLevel(state.levelIndex).duration);
   section.textContent = state.status === 'victory' ? `Hotovo · Level ${state.levelIndex + 1}`
-    : state.missionStage === 'warning' ? (state.levelIndex === 2 ? 'Varování · Ocelová pevnost' : state.levelIndex === 1 ? 'Varování · Admirál konvoje' : 'Varování · Blíží se velitel')
+    : state.missionStage === 'warning' ? `Varování · ${bossName(getLevel(state.levelIndex).bossVariant ?? 'commander')}`
     : state.missionStage === 'departing' ? 'Mise splněna · Odlet'
     : state.missionStage === 'bossDestroyed' ? 'Cíl zničen'
     : state.missionStage === 'boss' ? (state.boss?.mode === 'entering' ? 'Boss · Přílet pod štítem'
@@ -286,7 +293,7 @@ function tick(time: number) {
   bossHud.hidden = !state.boss || state.boss.mode === 'entering' || state.boss.mode === 'destroyed';
   bossHealth.max = state.boss?.maxHp ?? 60;
   bossHealth.value = Math.max(0, state.boss?.hp ?? 0);
-  bossLabel.textContent = `${state.boss?.variant === 'fortress' ? 'Ocelová pevnost' : state.boss?.variant === 'convoy' ? 'Admirál konvoje' : 'Velitel'} · ${Math.max(0, state.boss?.hp ?? 0)} / ${state.boss?.maxHp ?? 60}`;
+  bossLabel.textContent = `${bossName(state.boss?.variant ?? 'commander')} · ${Math.max(0, state.boss?.hp ?? 0)} / ${state.boss?.maxHp ?? 60}`;
   view.render(state, debugToggle.checked, terrainToggle.checked, selectedShip);
   frame = requestAnimationFrame(tick);
 }
@@ -307,6 +314,8 @@ if (import.meta.hot) {
     debugBoss3.removeEventListener('click', enterBoss3);
     debugDeparture.removeEventListener('click', previewDeparture);
     debugBoss2.removeEventListener('click', enterBoss2);
+    debugLevel4.removeEventListener('click', enterLevel4);
+    debugBoss4.removeEventListener('click', enterBoss4);
     debugShop.removeEventListener('click', previewShop);
     shopOptions.removeEventListener('click', purchase);
     shopOptions.replaceChildren();

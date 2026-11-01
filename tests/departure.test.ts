@@ -6,9 +6,9 @@ import { createBoss } from '../src/boss.ts';
 const idle = { x: 0, y: 0, fire: false };
 
 test('every level enters departure after boss explosion and shows victory only offscreen', () => {
-  for (const index of [0, 1, 2] as const) {
+  for (const index of [0, 1, 2, 3] as const) {
     const state = createGame(true, index);
-    state.boss = createBoss(state.nextId++, ['commander', 'convoy', 'fortress'][index] as 'commander' | 'convoy' | 'fortress');
+    state.boss = createBoss(state.nextId++, ['commander', 'convoy', 'fortress', 'dreadnought'][index] as 'commander' | 'convoy' | 'fortress' | 'dreadnought');
     Object.assign(state.boss, { hp: 0, mode: 'destroyed' });
     state.missionStage = 'bossDestroyed'; state.stageTimer = 0.05;
     updateGame(state, idle, 0.05);

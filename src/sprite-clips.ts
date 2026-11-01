@@ -14,6 +14,18 @@ const shipFrames = (y: number) => [0, 48, 96].map(x => ({
 
 export const SPRITE_CLIPS = {
   ...PLAYER_SHIP_CLIPS,
+  groundCannon: { start: 107, fps: 1, loop: true, size: 2, width: 1, referenceCell: 32,
+    frames: [56, 84].map(y => ({ source: 'newshs.shp.000000.png', x: 192, y, width: 24, height: 28 })) },
+  groundCannonBase: { start: 109, fps: 1, loop: true, size: 2.2, width: 1, referenceCell: 32,
+    frames: [{ source: 'newshs.shp.000000.png', x: 0, y: 196, width: 24, height: 28 }] },
+  wraithShip: { start: 101, fps: 1, loop: true, size: 2.2, width: 2, referenceCell: 32,
+    frames: [{ source: 'newsh2.shp.000000.png', x: 96, y: 56, width: 48, height: 28 }] },
+  bastionShip: { start: 102, fps: 1, loop: true, size: 2.8, width: 1, referenceCell: 32,
+    frames: [56, 84].map(y => ({ source: 'newsh2.shp.000000.png', x: 144, y, width: 24, height: 28 })) },
+  rotorShip: { start: 104, fps: 1, loop: true, size: 2.4, width: 1, referenceCell: 32,
+    frames: [{ source: 'newsh2.shp.000000.png', x: 0, y: 168, width: 24, height: 28 }] },
+  dreadnoughtBoss: { start: 105, fps: 1, loop: true, size: 8, width: 1, referenceCell: 32,
+    frames: [0, 112].map(y => ({ source: 'newsh4.shp.000000.png', x: 108, y, width: 120, height: 112 })) },
   weaverShip: { start: 53, fps: 1, loop: true, size: 2.3, width: 1, referenceCell: 32, frames: shipFrames(84) },
   strikerShip: { start: 56, fps: 1, loop: true, size: 2.6, width: 1, referenceCell: 32, frames: shipFrames(112) },
   fortressBoss: { start: 59, fps: 1, loop: true, size: 6.4, width: 208 / 144, referenceCell: 32,
@@ -64,6 +76,12 @@ export function spriteFrame(name: SpriteClip, age: number): number | null {
 
 // Velké trupy mají vlastní obdélníky pod řadami malých snímků.
 export function atlasRegion(index: number) {
+  if (index === 107) return { x: 480, y: 160, width: 32, height: 32 };
+  if (index === 108 || index === 109) return { x: 416 + (index - 108) * 32, y: 192, width: 32, height: 32 };
+  if (index === 101) return { x: 416, y: 128, width: 64, height: 32 };
+  if (index === 102) return { x: 480, y: 128, width: 32, height: 32 };
+  if (index === 103 || index === 104) return { x: 416 + (index - 103) * 32, y: 160, width: 32, height: 32 };
+  if (index === 105 || index === 106) return { x: (index - 105) * 128, y: 288, width: 128, height: 128 };
   // Nové malé lodě vyplňují tři volné spodní řady atlasu.
   if (index >= 60 && index <= 100) return { x: (index - 60) % 16 * 32,
     y: 416 + Math.floor((index - 60) / 16) * 32, width: index === 100 ? 64 : 32, height: 32 };

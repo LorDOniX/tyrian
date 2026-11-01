@@ -22,29 +22,28 @@ function hit(state: GameState) {
   projectile(state);
   updateGame(state, idle, 0.01);
 }
-function victory(credits = 10000) {
+function victory(credits = 20000) {
   const state = isolated(); state.status = 'victory'; state.credits = credits; state.score = credits;
   return state;
 }
 
-test('shield absorbs six hits before hull; final hull hit ends game and cannot be repaired', () => {
+test('each life has a full shield; depletion loses one life, refills shield, final depletion ends game', () => {
   const state = isolated();
-  assert.equal(state.shield, 6);
-  assert.equal(state.lives, 3);
-  for (let i = 0; i < 6; i++) hit(state);
-  assert.equal(state.shield, 0);
-  assert.equal(state.lives, 3);
-  assert.equal(state.effects.filter(effect => effect.kind === 'shield').length, 6);
-  hit(state);
-  assert.equal(state.lives, 2);
-  hit(state); hit(state);
-  assert.equal(state.lives, 0);
+  for (let life = 3; life > 0; life--) {
+    assert.equal(state.lives, life);
+    assert.equal(state.shield, 6);
+    for (let i = 0; i < 5; i++) hit(state);
+    assert.equal(state.shield, 1);
+    assert.equal(state.lives, life);
+    hit(state);
+    assert.equal(state.lives, life - 1);
+    assert.equal(state.shield, life > 1 ? 6 : 0);
+  }
   assert.equal(state.status, 'gameOver');
-  const shield = state.shield;
   state.pickups.push(createPickup(state.nextId++, 'repair', 0, -7));
   for (let i = 0; i < 100; i++) updateGame(state, { ...idle, fire: true }, 0.05);
   assert.equal(state.lives, 0);
-  assert.equal(state.shield, shield);
+  assert.equal(state.shield, 0);
   assert.equal(state.status, 'gameOver');
 });
 test('simultaneous projectiles and airship contact take one shield point with protection', () => {
@@ -63,87 +62,107 @@ test('simultaneous projectiles and airship contact take one shield point with pr
   assert.equal(state.lives, 3);
   assert.equal(state.enemies.length, 1);
 });
-test('shield delay resets on impact and recharge starts only after remaining delay, with cap', () => {
+test('shield does not regenerate over time and refills to purchased capacity when a life is lost', () => {
   const state = isolated();
   hit(state);
-  for (let i = 0; i < 40; i++) updateGame(state, idle, 0.05);
+  for (let i = 0; i < 200; i++) updateGame(state, idle, 0.05);
   assert.equal(state.shield, 5);
-  hit(state);
-  assert.equal(state.shield, 4);
-  assert.equal(state.shieldRegenDelay, 3);
-  for (let i = 0; i < 40; i++) updateGame(state, idle, 0.05);
-  assert.equal(state.shield, 4);
-  state.shieldRegenDelay = 0.02;
-  updateGame(state, idle, 0.05);
-  assert.ok(Math.abs(state.shield - 4.03) < 1e-10);
-  for (let i = 0; i < 100; i++) updateGame(state, idle, 0.05);
-  assert.equal(state.shield, 6);
+  assert.equal(state.lives, 3);
+  for (const rank of [0, 1, 2]) {
+    state.upgrades.shield = rank;
+    state.shield = 1;
+    state.lives = 3;
+    hit(state);
+    assert.equal(state.shield, maxShield(state.upgrades));
+    assert.equal(state.lives, 2);
+    // Další projektil v ochranné době už obnovený štít neubere.
+    projectile(state);
+    updateGame(state, idle, 0.05);
+    assert.equal(state.shield, maxShield(state.upgrades));
+  }
 });
-test('pause freezes recharge and hit feedback', () => {
+test('pause freezes shield and hit feedback', () => {
   const state = isolated(); hit(state); pauseGame(state);
   const frozen = structuredClone(state);
   updateGame(state, idle, 0.05);
   assert.deepEqual(state, frozen);
 });
 test('shop rejects live, unaffordable and maxed upgrades without spending or changing score', () => {
-  const live = isolated(); live.credits = 10000;
+  const live = isolated(); live.credits = 20000;
   assert.equal(buyUpgrade(live, 'weapon'), false);
-  assert.equal(live.credits, 10000);
-  const state = victory(2499);
+  assert.equal(live.credits, 20000);
+  const state = victory(4999);
   assert.equal(buyUpgrade(state, 'weapon'), false);
-  assert.equal(state.credits, 2499);
-  state.credits = 10000;
+  assert.equal(state.credits, 4999);
+  state.credits = 20000;
   assert.equal(buyUpgrade(state, 'weapon'), true);
-  assert.equal(state.credits, 7500);
-  assert.equal(upgradeCost(state.upgrades, 'weapon'), 5000);
+  assert.equal(state.credits, 15000);
+  assert.equal(upgradeCost(state.upgrades, 'weapon'), 10000);
   assert.equal(buyUpgrade(state, 'weapon'), true);
-  assert.equal(state.credits, 2500);
+  assert.equal(state.credits, 5000);
+  assert.equal(buyUpgrade(state, 'weapon'), false);
+  assert.equal(upgradeCost(state.upgrades, 'weapon'), 15000);
+  state.credits = 35000;
+  assert.equal(buyUpgrade(state, 'weapon'), true);
+  assert.equal(state.credits, 20000);
+  assert.equal(buyUpgrade(state, 'weapon'), true);
+  assert.equal(state.credits, 0);
+  state.credits = 100000;
   assert.equal(buyUpgrade(state, 'weapon'), false);
   assert.equal(upgradeCost(state.upgrades, 'weapon'), null);
-  assert.equal(state.upgrades.weapon, 2);
-  assert.equal(state.score, 2499);
+  assert.equal(state.upgrades.weapon, 4);
+  assert.equal(state.score, 4999);
 });
 test('bought equipment and unspent credits carry to next mission and survive defeat without farming', () => {
   const state = victory();
   buyUpgrade(state, 'weapon'); buyUpgrade(state, 'shield'); buyUpgrade(state, 'hull');
-  assert.equal(state.credits, 3000);
+  assert.equal(state.credits, 6000);
   advanceLevel(state);
   assert.equal(state.levelIndex, 1);
   assert.deepEqual(state.upgrades, { weapon: 1, shield: 1, hull: 1 });
   assert.equal(state.shield, 9);
   assert.equal(state.lives, 4);
-  assert.equal(state.score, 10000);
-  assert.equal(state.checkpointCredits, 3000);
-  state.score += 1500; state.credits += 1500;
+  assert.equal(state.score, 20000);
+  assert.equal(state.checkpointCredits, 6000);
+  state.score += 3000; state.credits += 3000;
   state.status = 'gameOver';
   restartGame(state);
-  assert.equal(state.score, 10000);
-  assert.equal(state.credits, 3000);
+  assert.equal(state.score, 20000);
+  assert.equal(state.credits, 6000);
   assert.equal(state.shield, 9);
   assert.equal(state.lives, 4);
   assert.deepEqual(state.upgrades, { weapon: 1, shield: 1, hull: 1 });
 });
 test('last mission purchases remain usable when replaying final mission', () => {
-  const state = victory(9000); state.levelIndex = 2;
+  const state = victory(18000); state.levelIndex = 3;
   buyUpgrade(state, 'weapon'); buyUpgrade(state, 'weapon');
   replayCompletedLevel(state);
-  assert.equal(state.levelIndex, 2);
+  assert.equal(state.levelIndex, 3);
   assert.equal(state.status, 'playing');
-  assert.equal(state.credits, 1500);
-  assert.equal(state.score, 9000);
+  assert.equal(state.credits, 3000);
+  assert.equal(state.score, 18000);
   assert.equal(state.upgrades.weapon, 2);
-  assert.equal(state.checkpointCredits, 1500);
+  assert.equal(state.checkpointCredits, 3000);
 });
-test('all weapon tiers use smaller bullets and stronger permanent patterns; temporary bonus does not stack', () => {
-  for (const [rank, count, cooldown] of [[0, 1, 0.22], [1, 2, 0.18], [2, 3, 0.14]]) {
+test('all five gun tiers fire parallel symmetric rows; temporary bonus adds one gun up to five', () => {
+  for (const [rank, count, cooldown] of [[0, 1, 0.22], [1, 2, 0.22], [2, 3, 0.22], [3, 4, 0.22], [4, 5, 0.22]]) {
     const state = isolated(); state.upgrades.weapon = rank!;
     updateGame(state, { ...idle, fire: true }, 0.05);
     assert.equal(state.bullets.length, count);
     assert.equal(state.cooldown, cooldown);
-    assert.ok(state.bullets.every(b => b.radius === 0.065));
+    assert.ok(state.bullets.every(b => b.radius === 0.065 && b.vx === 0 && b.vy === 22));
+    assert.ok(Math.abs(state.bullets.reduce((sum, b) => sum + b.x, 0)) < 1e-9);
+    state.bullets.forEach((b, i) => {
+      if (i > 0) assert.ok(Math.abs(b.x - state.bullets[i - 1]!.x - 0.32) < 1e-9);
+    });
     const temporary = isolated(); temporary.upgrades.weapon = rank!; temporary.weaponLeft = 12;
     updateGame(temporary, { ...idle, fire: true }, 0.05);
-    assert.equal(temporary.bullets.length, 3);
+    assert.equal(temporary.bullets.length, Math.min(5, count! + 1));
+    assert.ok(temporary.bullets.every(b => b.vx === 0));
+    temporary.bullets = []; temporary.cooldown = 0; temporary.weaponLeft = 0.01;
+    updateGame(temporary, { ...idle, fire: true }, 0.05);
+    assert.equal(temporary.weaponLeft, 0);
+    assert.equal(temporary.bullets.length, count);
   }
 });
 test('kill and full-hull repair credit real score once; upgraded hull repairs to purchased maximum', () => {

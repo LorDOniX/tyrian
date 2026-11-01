@@ -13,6 +13,11 @@ přidává druhý level se vzducholoděmi, poškozenými variantami trupu a debu
 [Fáze 10](faze10.md) ho zakončuje sprite bossem z `newsht.shp.000000.png`. [Fáze 11](faze11.md) přidává třetí level Ocelová pevnost, dva nové typy lodí a finálního bosse z `newsho.shp.000000.png`. Zachovává 3 životy, skóre, pauzu a restart.
 [Fáze 12](faze12.md) přidává odlet a sedm vzhledů hráče. [Fáze 13](faze13.md)
 přidává obnovitelné štíty, panel systémů a hangár s nákupem výzbroje, štítu a trupu.
+[Fáze 14](faze14.md) rozšiřuje kampaň o čtvrtý level Slévárna stínů, tři nové
+typy nepřátel z `newsh2`, bosse z `newsh4` a dvojnásobné ceny v hangáru. [Fáze 15](faze15.md) uzavírá střed bosse
+a mění štíty na samostatnou zásobu pro každý život. [Fáze 16](faze16.md)
+přidává výzbroj s jedním až pěti děly vedle sebe. [Fáze 17](faze17.md)
+používá sprite kanóny z `newshs` a mění dočasný bonus na jedno dělo navíc.
 
 ## Spuštění
 
@@ -22,10 +27,15 @@ npm run dev
 ```
 
 Šipky / WASD: pohyb. Mezerník: střelba. Esc: pauza. Enter: pokračování / restart.
-Základní loď má 6 bodů štítu a 3 životy. Po 3 sekundách bez zásahu se štít
-obnovuje rychlostí 1 bod za sekundu. Při nulovém štítu zásahy ubírají životy;
+Základní loď má 3 životy, každý s vlastními 6 body štítu. Vyčerpání štítu
+okamžitě odebere jeden život a zbývajícímu životu obnoví štít na maximum
+podle výbavy (6, 9 nebo 12). Štít se během života automaticky nedobíjí;
 ztráta posledního života znamená konec hry. Skóre zároveň přidává kredity.
-Po každé vítězné misi lze v hangáru koupit dvě úrovně výzbroje, štítu a trupu.
+Po každé vítězné misi lze v hangáru koupit čtyři vylepšení výzbroje a dvě úrovně štítu a trupu.
+Každé vylepšení výzbroje přidá jedno dělo až do maxima pěti vedle sebe;
+čtyři nákupy stojí 5 000 / 10 000 / 15 000 / 20 000 kreditů. Trup stojí
+5 000 / 10 000 kreditů a štít 4 000 / 8 000 kreditů. Bonus dočasně přidá
+jedno dělo, vždy nejvýše do pěti.
 Výbava i zůstatek přecházejí do další mise; po prohře se rozpočet vrací na
 začátek aktuální mise. Další mise začíná s plnou ochranou podle zakoupené výbavy.
 Po zničení bosse každého levelu loď automaticky zrychlí nahoru a odletí
@@ -42,7 +52,9 @@ Pro ladění závěrečného souboje: `npm run dev -- --mode boss`.
 Přímo do druhého levelu: `npm run dev:level2`. K jeho bossovi: `npm run dev:boss2`. Ve vývoji lze použít i tlačítko
 „Debug: start levelu 2“. Po vítězství v prvním levelu Enter přejde do druhého;
 po druhém levelu přejde do třetího. Po prohře restartuje aktuální level.
-Třetí level lze spustit přímo příkazem `npm run dev:level3`, jeho bosse `npm run dev:boss3`. Produkční hra vždy začíná levelem 1.
+Třetí level lze spustit přímo příkazem `npm run dev:level3`, jeho bosse `npm run dev:boss3`.
+Po třetím levelu Enter pokračuje do čtvrtého. Přímý start: `npm run dev:level4`,
+souboj s jeho bossem: `npm run dev:boss4`. Produkční hra vždy začíná levelem 1.
 
 ## Příkazy
 
@@ -51,7 +63,9 @@ Třetí level lze spustit přímo příkazem `npm run dev:level3`, jeho bosse `n
 - `npm run dev:level3` – vývojový start ve třetím levelu.
 - `npm run dev:boss3` – vývojový start před bossem třetího levelu.
 - `npm run dev:boss2` – vývojový start přímo před bossem druhého levelu.
-- `npm run dev:shop` – vývojový náhled hangáru s 9 000 kredity.
+- `npm run dev:level4` – vývojový start ve čtvrtém levelu.
+- `npm run dev:boss4` – vývojový start před bossem čtvrtého levelu.
+- `npm run dev:shop` – vývojový náhled hangáru s 50 000 kredity.
 - `npm run assets:prepare` – volitelné obnovení sprite atlasu ze zdrojů (vyžaduje FFmpeg).
 - `npm test` – testy kolizí a herních pravidel.
 - `npm run typecheck` – kontrola typů.
@@ -65,6 +79,8 @@ Třetí level lze spustit přímo příkazem `npm run dev:level3`, jeho bosse `n
 - `src/level.ts` – časované formace a části úrovně.
 - `src/convoy-boss.ts` – pravidla a útoky admirála konvoje.
 - `src/convoy-boss-model.ts` – sprite model, rozsvícené hlavně a štít.
+- `src/dreadnought-boss.ts` – útoky Stínového vládce.
+- `src/dreadnought-boss-model.ts` – nepoškozený a poškozený trup newsh4.
 - `src/fortress-boss.ts` – tři útoky a dvě fáze finálního bosse.
 - `src/fortress-boss-model.ts` – trup newsho, světla hlavní a příletový štít.
 - `src/boss.ts` – pravidla souboje a útoků.

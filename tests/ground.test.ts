@@ -59,7 +59,7 @@ test('ground events spawn once on entering range', () => {
 });
 test('flying over turret costs no life; visible turret fires after preparation', () => {
   const state = stateOnly();
-  state.shield = 0; state.shieldRegenDelay = 100;
+  state.shield = 0;
   const target = turret(-7);
   target.shotLeft = 0.01;
   state.groundTargets = [target];

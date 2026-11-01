@@ -1,3 +1,6 @@
+// Zdrojové listy Tyrianu používají tuto barvu i tehdy, když roh překrývá grafika.
+export const TYRIAN_BACKGROUND = [191, 220, 191] as const;
+
 export type SourceImage = { width: number; height: number; data: Uint8Array };
 
 // Odstraní pouze přesnou barvu pozadí. Černé obrysy i jiné zelené odstíny zůstanou.

@@ -1,10 +1,11 @@
+import { createDreadnoughtBossModel } from './dreadnought-boss-model.ts';
 import { maxShield } from './upgrades.ts';
 import { DEFAULT_PLAYER_SHIP, playerShipPose } from './player-ships.ts';
-import { PICKUP_SCALE } from './bonuses.ts';
+import { PICKUP_SCALE, playerVolley } from './bonuses.ts';
 import type { PlayerShipId } from './player-ships.ts';
 import { createFortressBossModel } from './fortress-boss-model.ts';
 import { createConvoyBossModel } from './convoy-boss-model.ts';
-import { ENEMY_TYPES, enemyCanCharge, enemySpritePose, enemyCircles } from './enemies.ts';
+import { ENEMY_TYPES, enemyCanCharge, enemySpritePose, enemyCircles, bastionMuzzleY } from './enemies.ts';
 import { createSpriteEffects } from './sprite-effects.ts';
 import { bossCircles } from './boss.ts';
 import { createBossModel } from './boss-model.ts';
@@ -37,6 +38,7 @@ export async function createScene(container: HTMLElement) {
 
   const terrain = createTerrain(scene);
   const bossModel = createBossModel(scene);
+  const dreadnoughtBossModel = createDreadnoughtBossModel(scene, sprites);
   const fortressBossModel = createFortressBossModel(scene, sprites);
   const convoyBossModel = createConvoyBossModel(scene, sprites);
 
@@ -45,6 +47,14 @@ export async function createScene(container: HTMLElement) {
   const hull = sprites.create(DEFAULT_PLAYER_SHIP);
   hull.renderOrder = 9;
   ship.add(hull);
+  const gunGeometry = new THREE.PlaneGeometry(0.1, 0.4);
+  const gunMaterial = new THREE.MeshBasicMaterial({ color: '#9fb4bd', depthTest: false, depthWrite: false });
+  const guns = Array.from({ length: 5 }, () => {
+    const gun = new THREE.Mesh(gunGeometry, gunMaterial);
+    gun.renderOrder = 10;
+    ship.add(gun);
+    return gun;
+  });
   const shieldMaterial = new THREE.MeshBasicMaterial({ color: '#67e8f9', transparent: true,
     opacity: 0.2, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
   const playerShield = new THREE.Mesh(new THREE.RingGeometry(1.03, 1.08, 48), shieldMaterial);
@@ -83,7 +93,6 @@ export async function createScene(container: HTMLElement) {
   });
 
   const coreGeometry = new THREE.SphereGeometry(0.1, 8, 6);
-  const muzzleGeometry = new THREE.BoxGeometry(0.25, 0.65, 0.25);
   const chargingMaterial = new THREE.MeshBasicMaterial({ color: '#ffef8a', transparent: true, depthTest: false, depthWrite: false });
   const debugGeometry = new THREE.RingGeometry(0.97, 1, 32);
   const debugMaterial = new THREE.MeshBasicMaterial({ color: '#a3ff8f', depthTest: false, depthWrite: false, transparent: true });
@@ -95,8 +104,6 @@ export async function createScene(container: HTMLElement) {
   const bulletModels = new Map<number, THREE.Object3D>();
   const turretBaseGeometry = new THREE.CylinderGeometry(0.7, 0.95, 0.5, 8);
   turretBaseGeometry.rotateX(Math.PI / 2);
-  const turretHeadGeometry = new THREE.SphereGeometry(0.5, 12, 8);
-  const turretMaterial = new THREE.MeshStandardMaterial({ color: '#7b9d82', metalness: 0.5, roughness: 0.5 });
   const wreckMaterial = new THREE.MeshStandardMaterial({ color: '#3b3531', roughness: 0.95 });
   const groundModels = new Map<number, THREE.Object3D>();
   const wreckModels = new Map<number, THREE.Object3D>();
@@ -144,6 +151,11 @@ export async function createScene(container: HTMLElement) {
     lastLevel = state.levelIndex;
     ship.position.set(state.player.x, state.player.y, 0);
     sprites.animate(hull, playerShip, playerShipPose(playerShip, state.tilt));
+    const volley = playerVolley(state.weaponLeft > 0, state.upgrades.weapon);
+    guns.forEach((gun, i) => {
+      gun.visible = i < volley.length;
+      if (volley[i]) gun.position.set(volley[i]!.offsetX, 0.9, 0.1);
+    });
     const departing = state.missionStage === 'departing';
     ship.visible = state.status !== 'gameOver' && !(departing && state.status === 'victory') &&
       (state.invulnerabilityLeft === 0 || Math.floor(state.time * 12) % 2 === 0);
@@ -171,9 +183,15 @@ export async function createScene(container: HTMLElement) {
       const model = new THREE.Group();
       const icon = sprites.create(ENEMY_TYPES[enemy.kind].clip);
       icon.name = 'icon';
-      icon.rotation.z = enemy.kind === 'airship' ? 0 : Math.PI; // Menší lodě míří v předloze vzhůru, vzducholoď již dolů.
+      icon.rotation.z = ['airship', 'wraith', 'bastion', 'rotor'].includes(enemy.kind) ? 0 : Math.PI; // Starší malé lodě míří v předloze vzhůru, nové trupy a vzducholoď dolů.
       icon.renderOrder = 6;
       model.add(icon);
+      if (enemy.kind === 'bastion') {
+        const front = sprites.create('bastionShip');
+        front.name = 'front';
+        front.renderOrder = 6;
+        model.add(front);
+      }
       if (enemy.kind !== 'scout') {
         for (const [index, x] of (enemy.kind === 'airship' ? [-1.8, 1.8] : [0]).entries()) {
           const muzzle = new THREE.Mesh(coreGeometry, chargingMaterial);
@@ -193,12 +211,23 @@ export async function createScene(container: HTMLElement) {
     }, (model, enemy) => {
       place(model, enemy);
       const icon = model.getObjectByName('icon')!;
-      const bank = enemySpritePose(enemy);
-      sprites.animate(icon, ENEMY_TYPES[enemy.kind].clip, bank);
+      if (enemy.kind === 'bastion') {
+        for (const part of enemy.parts ?? []) {
+          const piece = part.frame === 0 ? icon : model.getObjectByName('front')!;
+          sprites.animate(piece, 'bastionShip', part.frame);
+          piece.position.y = part.offsetY;
+          piece.visible = part.hp > 0 && (part.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0);
+        }
+        model.getObjectByName('muzzle')!.position.y = bastionMuzzleY(enemy) - enemy.y;
+      } else {
+        const bank = enemySpritePose(enemy);
+        sprites.animate(icon, ENEMY_TYPES[enemy.kind].clip, bank);
+        icon.visible = enemy.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
+      }
       // Kapičky drží jeden snímek; plynulé otočení nenaruší změna směru kličkování.
       if (enemy.kind === 'weaver') icon.rotation.z = Math.PI + (enemy.age ?? 0) * 2.5;
-      // Záblesk zásahu skrývá pouze trup, nikoli signál chystaného útoku.
-      icon.visible = enemy.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
+      if (enemy.kind === 'rotor') icon.rotation.z = (enemy.age ?? 0) * 3;
+      if (enemy.kind === 'wraith') icon.rotation.z = Math.sin((enemy.age ?? 0) * 2.4) * 0.12;
       for (const name of ['muzzle', 'muzzle-right']) {
         const muzzle = model.getObjectByName(name);
         if (!muzzle) continue;
@@ -211,27 +240,31 @@ export async function createScene(container: HTMLElement) {
     });
     sync(state.groundTargets, groundModels, () => {
       const model = new THREE.Group();
-      const base = new THREE.Mesh(turretBaseGeometry, turretMaterial);
+      const base = sprites.create('groundCannonBase');
+      sprites.animate(base, 'groundCannonBase', 0);
       base.position.z = -3.8;
-      const head = new THREE.Mesh(turretHeadGeometry, turretMaterial);
-      head.scale.set(1, 1, 0.65);
-      head.position.z = -3.3;
+      base.renderOrder = 2;
       const pivot = new THREE.Group();
       pivot.name = 'pivot';
-      const barrel = new THREE.Mesh(muzzleGeometry, turretMaterial);
-      barrel.position.set(0, 0.65, -3.1);
-      barrel.scale.y = 1.4;
+      const head = sprites.create('groundCannon');
+      head.name = 'head';
+      head.rotation.z = Math.PI;
+      // Střed otočné části zdrojového spritu je šest pixelů nad středem buňky.
+      head.position.set(0, 0.375, -3.1);
+      head.renderOrder = 3;
       const flash = new THREE.Mesh(coreGeometry, chargingMaterial);
       flash.name = 'charge';
       flash.position.set(0, 1.05, -3);
-      pivot.add(barrel, flash);
-      model.add(base, head, pivot);
+      flash.renderOrder = 4;
+      pivot.add(head, flash);
+      model.add(base, pivot);
       return model;
     }, (model, target) => {
       place(model, target);
       model.visible = target.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
       const pivot = model.getObjectByName('pivot')!;
       pivot.rotation.z = Math.atan2(state.player.y - target.y, state.player.x - target.x) - Math.PI / 2;
+      sprites.animate(pivot.getObjectByName('head')!, 'groundCannon', target.shotLeft <= 0.4 ? 1 : 0);
       const charge = pivot.getObjectByName('charge')!;
       charge.visible = target.shotLeft <= 0.4 && target.y + TURRET_EXTENT <= 12 && target.y - TURRET_EXTENT >= -12;
       charge.scale.setScalar(1 + (0.4 - Math.max(0, target.shotLeft)) * 4);
@@ -280,7 +313,7 @@ export async function createScene(container: HTMLElement) {
     });
     const bossDebug = state.boss && state.boss.mode !== 'destroyed'
       ? bossCircles(state.boss).map((circle, index) => ({ ...circle, id: -100 - index })) : [];
-    sync(debug ? [state.player, ...state.enemies.flatMap(enemy => enemy.kind === 'airship'
+    sync(debug ? [state.player, ...state.enemies.flatMap(enemy => (enemy.kind === 'airship' || enemy.kind === 'bastion')
         ? enemyCircles(enemy).map((circle, i) => ({ ...circle, id: -1000 - enemy.id * 4 - i })) : [enemy]), ...state.groundTargets, ...state.bullets, ...state.pickups, ...bossDebug] : [], debugModels,
       () => new THREE.Mesh(debugGeometry, debugMaterial), (model, body) => {
         model.position.set(body.x, body.y, 2);
@@ -288,6 +321,7 @@ export async function createScene(container: HTMLElement) {
         model.renderOrder = 30;
       });
     bossModel.render(state.boss?.variant === 'commander' ? state.boss : null, state.time, state.stageTimer);
+    dreadnoughtBossModel.render(state.boss, state.time, state.stageTimer);
     fortressBossModel.render(state.boss, state.time, state.stageTimer);
     convoyBossModel.render(state.boss, state.time, state.stageTimer);
     terrain.render(state.scrollDistance, state.player.x, state.player.y, showTerrain, ship.visible, state.levelIndex);
@@ -306,10 +340,11 @@ export async function createScene(container: HTMLElement) {
     observer.disconnect();
     terrain.dispose();
     bossModel.dispose();
+    dreadnoughtBossModel.dispose();
     fortressBossModel.dispose();
     convoyBossModel.dispose();
     // Sprity vlastní svůj sdílený materiál, geometrii a texturu.
-    for (const models of [bulletModels, enemyModels, effectModels, pickupModels]) {
+    for (const models of [bulletModels, enemyModels, groundModels, effectModels, pickupModels]) {
       models.forEach(model => scene.remove(model));
       models.clear();
     }
@@ -317,10 +352,10 @@ export async function createScene(container: HTMLElement) {
     sprites.dispose();
     // Evidence zahrnuje i sdílené prostředky modelů odstraněných během hry.
     const geometries = new Set<THREE.BufferGeometry>([
-      markerGeometry, debugGeometry, coreGeometry, muzzleGeometry, turretBaseGeometry, turretHeadGeometry,
+      markerGeometry, debugGeometry, coreGeometry, turretBaseGeometry,
     ]);
     const materials = new Set<THREE.Material>([
-      markerMaterial, spreadHalo, repairHalo, debugMaterial, chargingMaterial, turretMaterial, wreckMaterial,
+      markerMaterial, spreadHalo, repairHalo, debugMaterial, chargingMaterial, wreckMaterial,
     ]);
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh || object instanceof THREE.Points) {

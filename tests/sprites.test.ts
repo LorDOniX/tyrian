@@ -94,7 +94,7 @@ test('protected player consumes projectile with shield effect, without losing li
 });
 test('death effect finishes behind result panel while gameplay remains frozen', () => {
   const state = createGame();
-  state.shield = 0; state.shieldRegenDelay = 100;
+  state.shield = 0;
   state.lives = 1;
   state.bullets.push({ ...shot(state.nextId++), y: -6.5, previousY: -6.5, owner: 'enemy', vy: -22 });
   updateGame(state, idle, 0.05);

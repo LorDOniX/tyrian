@@ -44,6 +44,12 @@ export const LEVEL_EVENTS: readonly SpawnEvent[] = Object.freeze(
 );
 
 export function levelPart(time: number, index: LevelIndex = 0): string {
+  if (index === 3) {
+    if (time >= getLevel(3).duration) return 'Dokonči souboj';
+    if (time >= 42) return '3 / 3 · Poslední obranná linie';
+    if (time >= 21) return '2 / 3 · Rotační past';
+    return '1 / 3 · Hlídky slévárny';
+  }
   if (index === 2) {
     if (time >= getLevel(2).duration) return 'Dokonči souboj';
     if (time >= 36) return '3 / 3 · Obrana pevnosti';
@@ -68,7 +74,7 @@ export const GROUND_TARGETS: readonly Readonly<{ x: number; levelY: number }>[] 
   Object.freeze({ x: 0, levelY: 185 }),  // 43. sekunda
 ]);
 
-export type LevelIndex = 0 | 1 | 2;
+export type LevelIndex = 0 | 1 | 2 | 3;
 export type LevelDefinition = Readonly<{
   name: string; duration: number; events: readonly SpawnEvent[];
   groundTargets: readonly Readonly<{ x: number; levelY: number }>[]; boss: boolean; bossVariant?: BossVariant;
@@ -106,6 +112,26 @@ wave(37, 'weaver', [-5, 0, 5], 'repair');
 wave(41, 'striker', [-4, 4]);
 wave(45, 'interceptor', [-5, 0, 5]);
 wave(48, 'pulsar', [0]);
+const foundry: SpawnEvent[] = [];
+const foundryWave = (at: number, kind: EnemyKind, xs: number[], drop?: PickupKind) => {
+  xs.forEach(x => foundry.push({ at, kind, x, y: 14, drop }));
+};
+foundryWave(1, 'wraith', [-5, 0, 5]);
+foundryWave(5, 'bastion', [-4, 4], 'spread');
+foundryWave(9, 'rotor', [-5, 0, 5]);
+foundryWave(13, 'wraith', [-5, -1.5, 2, 5.5]);
+foundryWave(17, 'bastion', [0], 'repair');
+foundryWave(21, 'rotor', [-5, 5]);
+foundryWave(23, 'wraith', [-4, 0, 4]);
+foundryWave(27, 'bastion', [-4, 4]);
+foundryWave(30, 'rotor', [-5, 0, 5]);
+foundryWave(34, 'wraith', [-5, -1.5, 2, 5.5]);
+foundryWave(38, 'bastion', [0], 'spread');
+foundryWave(42, 'rotor', [-5, 5]);
+foundryWave(45, 'wraith', [-5, 0, 5]);
+foundryWave(49, 'bastion', [-4, 4]);
+foundryWave(53, 'rotor', [0], 'repair');
+foundryWave(57, 'wraith', [-5, 0, 5]);
 export const LEVELS: readonly LevelDefinition[] = Object.freeze([
   Object.freeze({ name: 'Základna', duration: LEVEL_DURATION, events: LEVEL_EVENTS, groundTargets: GROUND_TARGETS, boss: true, bossVariant: 'commander' }),
   Object.freeze({ name: 'Vzdušný konvoj', duration: 48,
@@ -115,6 +141,11 @@ export const LEVELS: readonly LevelDefinition[] = Object.freeze([
     events: Object.freeze(fortress.sort((a, b) => a.at - b.at).map(event => Object.freeze(event))),
     groundTargets: Object.freeze([{ x: -5, levelY: 65 }, { x: 5, levelY: 137 }, { x: 0, levelY: 193 }]),
     boss: true, bossVariant: 'fortress' }),
+  Object.freeze({ name: 'Slévárna stínů', duration: 64,
+    events: Object.freeze(foundry.map(event => Object.freeze(event))),
+    groundTargets: Object.freeze([{ x: -5, levelY: 49 }, { x: 5, levelY: 85 },
+      { x: -4, levelY: 137 }, { x: 4, levelY: 169 }, { x: 0, levelY: 225 }]),
+    boss: true, bossVariant: 'dreadnought' }),
 ]);
 export function getLevel(index: LevelIndex): LevelDefinition { return LEVELS[index]!; }
 

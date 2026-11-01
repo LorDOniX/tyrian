@@ -1,7 +1,7 @@
 import { freshUpgrades, maxShield, maxLives, weaponCooldown, upgradeCost } from './upgrades.ts';
 import type { Upgrades, UpgradeKind } from './upgrades.ts';
 import { createEnemy, updateEnemy, enemyVolley, ENEMY_TYPES, enemyCircles, enemyExtent } from './enemies.ts';
-import type { Enemy } from './enemies.ts';
+import type { Enemy, EnemyPart } from './enemies.ts';
 export type { Enemy } from './enemies.ts';
 import { createPickup, updateBonuses, playerVolley } from './bonuses.ts';
 import type { BonusState } from './bonuses.ts';
@@ -29,7 +29,7 @@ export type Effect = { id: number; x: number; y: number; age: number; kind: Effe
 export type GameState = BonusState & {
   levelIndex: LevelIndex; checkpointScore: number;
   credits: number; checkpointCredits: number; upgrades: Upgrades;
-  shield: number; shieldRegenDelay: number; shieldHitLeft: number;
+  shield: number; shieldHitLeft: number;
   missionStage: 'waves' | 'warning' | 'boss' | 'bossDestroyed' | 'departing';
   departure: { startY: number; elapsed: number } | null;
   stageTimer: number; boss: Boss | null;
@@ -46,7 +46,7 @@ export function createGame(startAtBoss = false, levelIndex: LevelIndex = 0, upgr
   return {
     levelIndex, checkpointScore: 0, departure: null,
     credits: 0, checkpointCredits: 0, upgrades: { ...upgrades },
-    shield: maxShield(upgrades), shieldRegenDelay: 0, shieldHitLeft: 0,
+    shield: maxShield(upgrades), shieldHitLeft: 0,
     missionStage: startAtBoss ? 'warning' : 'waves', stageTimer: startAtBoss ? 1.5 : 0, boss: null,
     status: 'playing', score: 0, lives: maxLives(upgrades),
     pickups: [], weaponLeft: 0, bonusNotice: null, noticeLeft: 0, time: startAtBoss ? level.duration : 0,
@@ -86,8 +86,6 @@ export function buyUpgrade(state: GameState, kind: UpgradeKind): boolean {
   if (kind === 'hull') state.lives = maxLives(state.upgrades);
   return true;
 }
-export const SHIELD_REGEN_DELAY = 3;
-export const SHIELD_REGEN_RATE = 1;
 export const DEPARTURE_DURATION = 2.2;
 export const DEPARTURE_END_Y = WORLD_HEIGHT / 2 + 6;
 
@@ -171,9 +169,6 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     return wreck.y >= -13;
   });
   state.shieldHitLeft = Math.max(0, state.shieldHitLeft - dt);
-  const rechargeTime = Math.max(0, dt - state.shieldRegenDelay);
-  state.shieldRegenDelay = Math.max(0, state.shieldRegenDelay - dt);
-  state.shield = Math.min(maxShield(state.upgrades), state.shield + rechargeTime * SHIELD_REGEN_RATE);
   state.invulnerabilityLeft = Math.max(0, state.invulnerabilityLeft - dt);
   state.cooldown = Math.max(0, state.cooldown - dt);
   const length = Math.hypot(input.x, input.y);
@@ -202,7 +197,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     for (const shot of playerVolley(state.weaponLeft > 0, state.upgrades.weapon)) {
       state.bullets.push(makeBullet(state, player.x + shot.offsetX, player.y + 1.1, 'player', shot.vx, shot.vy));
     }
-    state.cooldown = weaponCooldown(state.upgrades);
+    state.cooldown = weaponCooldown();
   }
   while (state.nextEvent < level.events.length && level.events[state.nextEvent]!.at <= state.time) {
     const event = level.events[state.nextEvent++]!;
@@ -216,13 +211,20 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   const deadEnemies = new Set<number>();
   const deadBullets = new Set<number>();
-  const hits: { time: number; bullet: Bullet; enemy: Enemy | GroundTarget | Boss }[] = [];
+  const hits: { time: number; bullet: Bullet; enemy: Enemy | GroundTarget | Boss; part?: EnemyPart }[] = [];
   for (const bullet of state.bullets) {
     if (bullet.owner !== 'player') continue;
     for (const enemy of [...state.enemies, ...state.groundTargets]) {
-      const circles = enemy.kind === 'turret' ? [enemy] : enemyCircles(enemy);
-      const times = circles.map(circle => sweepHit(bullet, circle)).filter((time): time is number => time !== null);
-      if (times.length) hits.push({ time: Math.min(...times), bullet, enemy });
+      if (enemy.kind === 'bastion') {
+        for (const circle of enemyCircles(enemy)) {
+          const time = sweepHit(bullet, circle);
+          if (time !== null) hits.push({ time, bullet, enemy, part: circle.part });
+        }
+      } else {
+        const circles = enemy.kind === 'turret' ? [enemy] : enemyCircles(enemy);
+        const times = circles.map(circle => sweepHit(bullet, circle)).filter((time): time is number => time !== null);
+        if (times.length) hits.push({ time: Math.min(...times), bullet, enemy });
+      }
     }
   }
   if (state.boss && state.boss.mode !== 'destroyed') {
@@ -241,18 +243,25 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     y: body.previousY + (body.y - body.previousY) * time,
   });
   hits.sort((a, b) => a.time - b.time || a.bullet.id - b.bullet.id || a.enemy.id - b.enemy.id);
-  for (const { bullet, enemy, time } of hits) {
-    if (deadBullets.has(bullet.id) || deadEnemies.has(enemy.id)) continue;
+  for (const { bullet, enemy, time, part } of hits) {
+    if (deadBullets.has(bullet.id) || deadEnemies.has(enemy.id) || (part && part.hp <= 0)) continue;
     deadBullets.add(bullet.id);
     const contact = hitPosition(bullet, time);
     if (enemy.kind === 'boss' && enemy.mode === 'entering') {
       effect('shield', contact.x, contact.y);
       continue;
     }
-    enemy.hp--;
-    enemy.hitLeft = 0.12;
+    if (part && enemy.kind === 'bastion') {
+      part.hp--;
+      part.hitLeft = 0.12;
+      enemy.hp = enemy.parts!.reduce((sum, piece) => sum + piece.hp, 0);
+      if (part.hp === 0) explode(enemy.x, enemy.y + part.offsetY);
+    } else {
+      enemy.hp--;
+      enemy.hitLeft = 0.12;
+    }
     if (enemy.hp > 0) {
-      effect('impact', contact.x, contact.y);
+      if (!part || part.hp > 0) effect('impact', contact.x, contact.y);
       continue;
     }
     deadEnemies.add(enemy.id);
@@ -272,8 +281,8 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       state.bullets = state.bullets.filter(bullet => bullet.owner === 'player');
     }
     if (enemy.kind === 'turret') state.wrecks.push({ id: enemy.id, x: enemy.x, levelY: enemy.levelY, y: enemy.y });
-    state.score += enemy.kind === 'boss' ? (enemy.variant === 'fortress' ? 7500 : enemy.variant === 'convoy' ? 5000 : 2000) : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
-    explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
+    state.score += enemy.kind === 'boss' ? (enemy.variant === 'dreadnought' ? 10000 : enemy.variant === 'fortress' ? 7500 : enemy.variant === 'convoy' ? 5000 : 2000) : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
+    if (!part) explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
       enemy.previousY + (enemy.y - enemy.previousY) * time);
     if (enemy.kind === 'airship') {
       effect('explosion', enemy.x - 0.8, enemy.y - 2, 1.3);
@@ -282,13 +291,13 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   const damagePlayer = () => {
     if (state.invulnerabilityLeft > 0) return;
-    state.shieldRegenDelay = SHIELD_REGEN_DELAY;
-    if (state.shield > 0) {
-      state.shield = Math.max(0, state.shield - 1);
-      state.shieldHitLeft = 0.3;
-      effect('shield', player.x, player.y, 1.8);
-    } else {
+    const shielded = state.shield > 0;
+    state.shield = Math.max(0, state.shield - 1);
+    state.shieldHitLeft = shielded ? 0.3 : 0;
+    if (shielded) effect('shield', player.x, player.y, 1.8);
+    if (state.shield === 0) {
       state.lives--;
+      if (state.lives > 0) state.shield = maxShield(state.upgrades);
       effect(state.lives === 0 ? 'explosion' : 'impact', player.x, player.y, state.lives === 0 ? 1 : 1.5);
     }
     state.invulnerabilityLeft = 1;
@@ -307,7 +316,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   for (const enemy of state.enemies) {
     if (state.invulnerabilityLeft > 0) break;
     if (!deadEnemies.has(enemy.id) && enemyCircles(enemy).some(circle => circlesOverlap(player, circle))) {
-      if (enemy.kind !== 'airship') {
+      if (enemy.kind !== 'airship' && enemy.kind !== 'bastion') {
         deadEnemies.add(enemy.id);
         explode(enemy.x, enemy.y);
       }

@@ -56,7 +56,7 @@ test('pickup collection sweeps moving player, removes reward once, activates imm
   updateGame(state, { x: 1, y: 0, fire: true }, 0.05);
   assert.equal(state.pickups.length, 0);
   assert.equal(state.weaponLeft, SPREAD_DURATION);
-  assert.equal(state.bullets.length, 3);
+  assert.equal(state.bullets.length, 2);
   assert.equal(state.bonusNotice, 'spread');
   updateGame(state, idle, 0.05);
   assert.ok(state.weaponLeft < SPREAD_DURATION);
@@ -88,18 +88,19 @@ test('repeat spread renews duration without stacking; expiry restores single sho
   assert.equal(state.weaponLeft, 0);
   assert.equal(state.bullets.length, 1);
 });
-test('spread rays have equal speed, symmetric angles and unchanged cooldown', () => {
+test('bonus adds one parallel gun with symmetric positions and unchanged cooldown', () => {
   const volley = playerVolley(true);
-  assert.equal(volley.length, 3);
-  assert.equal(volley[0]!.vx, -volley[2]!.vx);
+  assert.equal(volley.length, 2);
+  assert.equal(volley[0]!.offsetX, -volley[1]!.offsetX);
+  assert.ok(volley.every(ray => ray.vx === 0));
   assert.equal(volley[1]!.vx, 0);
   volley.forEach(ray => assert.ok(Math.abs(Math.hypot(ray.vx, ray.vy) - 22) < 1e-10));
   const state = only();
   state.weaponLeft = 12;
   updateGame(state, { ...idle, fire: true }, 0.05);
-  assert.equal(state.bullets.length, 3);
+  assert.equal(state.bullets.length, 2);
   updateGame(state, { ...idle, fire: true }, 0.05);
-  assert.equal(state.bullets.length, 3);
+  assert.equal(state.bullets.length, 2);
 });
 test('pause freezes bonus flight, weapon and notice; result cannot collect and restart clears all', () => {
   const state = only();
@@ -141,7 +142,7 @@ test('missed rewards disappear, never block boss warning or revive dead player',
 });
 test('repair is collected before hostile damage in the same step', () => {
   const state = only();
-  state.shield = 0; state.shieldRegenDelay = 100;
+  state.shield = 0;
   state.lives = 1;
   state.pickups = [createPickup(state.nextId++, 'repair', 0, -7)];
   state.bullets = [{ ...shot(state.nextId++, -6.5), owner: 'enemy', vy: -22 }];

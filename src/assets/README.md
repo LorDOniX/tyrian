@@ -1,6 +1,6 @@
 # Tyrian FX atlas
 
-`tyrian-fx.png` je připravený RGBA atlas 512 × 512 px (101 snímků).
+`tyrian-fx.png` je připravený RGBA atlas 512 × 512 px (110 snímků).
 Vznikl z těchto souborů přidaných do repozitáře:
 
 - `Remastered Tyrian Graphics/newsh6.shp.000000.png`
@@ -11,6 +11,9 @@ Vznikl z těchto souborů přidaných do repozitáře:
 - `Remastered Tyrian Graphics/newshi.shp.000000.png`
 - `Remastered Tyrian Graphics/newsht.shp.000000.png`
 - `Remastered Tyrian Graphics/newsho.shp.000000.png`
+- `Remastered Tyrian Graphics/newsh2.shp.000000.png`
+- `Remastered Tyrian Graphics/newsh4.shp.000000.png`
+- `Remastered Tyrian Graphics/newshs.shp.000000.png`
 
 Výřezy a animační klipy: `src/sprite-clips.ts`.
 Odstraněná barva pozadí: RGB (191, 220, 191), bez odstraňování jiných barev.
@@ -33,3 +36,20 @@ Sedm vzhledů hráče je popsáno v `src/player-ships.ts`: šest trupů s náklo
 První stříbrný trup je výchozí. Efekty, projektily a malé komponenty na zdrojovém
 listu nejsou samostatné lodě. Původní 3D trup hráče nahrazují sprite modely,
 3D terén a ortografická kamera zůstávají.
+
+Čtvrtá mise používá čtyři snímky tří nepřátel z `newsh2` a dva celé trupy
+bosse z `newsh4`. Boss má výřezy (108, 0, 120, 112) a (108, 112, 120, 112),
+umístěné v atlasu do oblastí 128 × 128 px na (0, 288) a (128, 288).
+List `newsh4` má v levém horním rohu kresbu, proto se klíč pozadí bere
+z konstanty `TYRIAN_BACKGROUND` v `scripts/sprite-pixels.ts`, nikoli z prvního
+pixelu obrázku. Hnědé části trupu tak zůstávají zachované a zelené pozadí
+včetně otvoru v těle bosse je průhledné. Podrobnosti jsou ve `faze14.md`.
+
+Původní průhledný střed bosse z `newsh4` nyní ve hře překrývá pancéřový
+panel z `src/dreadnought-boss-model.ts`. Doplněný kolizní kruh zahrnuje i
+tuto část trupu; výplň funguje v obou variantách spritu.
+
+Pozemní kanóny používají `newshs`: otočná hlava má výřezy
+(192, 56, 24, 28) a (192, 84, 24, 28), pevná základna (0, 196, 24, 28).
+Přibyly klipy `groundCannon` a `groundCannonBase`, celkem tři snímky.
+Při přípravě výstřelu se použije rozsvícená varianta hlavy. Více ve `faze17.md`.

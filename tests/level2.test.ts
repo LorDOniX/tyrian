@@ -82,7 +82,7 @@ test('first damage swaps airship sprite, overlapping hull circles do not multipl
 test('airship hull includes nose and tail, does not disappear on player contact', () => {
   for (const y of [3.8, 8.2]) {
     const { state, airship } = encounter();
-    state.shield = 0; state.shieldRegenDelay = 100;
+    state.shield = 0;
     state.player.y = y;
     updateGame(state, idle, 0.05);
     assert.equal(state.lives, 2);

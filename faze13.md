@@ -18,6 +18,10 @@ vrátí zakoupený stupeň; efekty se nesčítají do více než tří střel v 
 
 ## Ochrana lodi
 
+> Pozdější [fáze 15](faze15.md) nahrazuje níže popsané průběžné dobíjení:
+> každý život má vlastní štít, jehož vyčerpání odebere život a obnoví
+> štít zbývajícímu životu.
+
 Základní loď začíná se **6 body štítu a 3 životy**.
 
 1. Zásah nejprve ubere jeden bod štítu. I částečně obnovený štít absorbuje

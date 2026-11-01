@@ -1,12 +1,13 @@
+import { updateDreadnoughtBoss, DREADNOUGHT_CIRCLES } from './dreadnought-boss.ts';
 import { updateFortressBoss, FORTRESS_CIRCLES } from './fortress-boss.ts';
 import { updateConvoyBoss, CONVOY_CIRCLES } from './convoy-boss.ts';
 import type { MovingCircle } from './collision.ts';
 
-export type BossVariant = 'commander' | 'convoy' | 'fortress';
+export type BossVariant = 'commander' | 'convoy' | 'fortress' | 'dreadnought';
 export type Boss = MovingCircle & {
   id: number; kind: 'boss'; variant: BossVariant; speed: number; hp: number; maxHp: number; hitLeft: number;
   phase: 1 | 2; mode: 'entering' | 'charging' | 'firing' | 'resting' | 'transitioning' | 'destroyed';
-  attack: 'aimed' | 'fan' | 'crossfire' | 'barrage' | 'pulse' | 'sweep' | 'curtain' | 'spiral'; timer: number; shots: number;
+  attack: 'aimed' | 'fan' | 'crossfire' | 'barrage' | 'pulse' | 'sweep' | 'curtain' | 'spiral' | 'pincer' | 'lattice' | 'helix'; timer: number; shots: number;
   aimX: number; aimY: number; targetX: number; targetY: number; attackSpeed: number; restDuration: number;
   restTarget: number; restStartX: number; moveIndex: number;
 };
@@ -18,14 +19,15 @@ export const BOSS_CIRCLES = [
 ] as const;
 
 export function createBoss(id: number, variant: BossVariant = 'commander'): Boss {
+  const hp = variant === 'dreadnought' ? 150 : variant === 'fortress' ? 110 : variant === 'convoy' ? 80 : 60;
   return { id, kind: 'boss', variant, x: 0, y: 15, previousX: 0, previousY: 15, radius: 1.25,
-    speed: variant === 'convoy' ? 2.5 : 3, hp: variant === 'fortress' ? 110 : variant === 'convoy' ? 80 : 60, maxHp: variant === 'fortress' ? 110 : variant === 'convoy' ? 80 : 60, hitLeft: 0, phase: 1, mode: 'entering',
-    attack: variant === 'fortress' ? 'sweep' : variant === 'convoy' ? 'crossfire' : 'aimed', timer: 0, shots: 0, aimX: 0, aimY: -1, targetX: 0, targetY: -7,
+    speed: variant === 'convoy' ? 2.5 : 3, hp, maxHp: hp, hitLeft: 0, phase: 1, mode: 'entering',
+    attack: variant === 'dreadnought' ? 'pincer' : variant === 'fortress' ? 'sweep' : variant === 'convoy' ? 'crossfire' : 'aimed', timer: 0, shots: 0, aimX: 0, aimY: -1, targetX: 0, targetY: -7,
     attackSpeed: 5, restDuration: 1.2, restTarget: -3, restStartX: 0, moveIndex: 0 };
 }
 
 export function bossCircles(boss: Boss): MovingCircle[] {
-  return (boss.variant === 'fortress' ? FORTRESS_CIRCLES : boss.variant === 'convoy' ? CONVOY_CIRCLES : BOSS_CIRCLES).map(circle => ({
+  return (boss.variant === 'dreadnought' ? DREADNOUGHT_CIRCLES : boss.variant === 'fortress' ? FORTRESS_CIRCLES : boss.variant === 'convoy' ? CONVOY_CIRCLES : BOSS_CIRCLES).map(circle => ({
     x: boss.x + circle.x, y: boss.y + circle.y, radius: circle.radius,
     previousX: boss.previousX + circle.x, previousY: boss.previousY + circle.y,
   }));
@@ -47,6 +49,7 @@ function rest(boss: Boss) {
 
 // Vrátí požadavky na střely. Hra je vytvoří až po vyřešení zásahů bosse.
 export function updateBoss(boss: Boss, dt: number, player: { x: number; y: number }): BossShot[] {
+  if (boss.variant === 'dreadnought') return updateDreadnoughtBoss(boss, dt, player);
   if (boss.variant === 'fortress') return updateFortressBoss(boss, dt, player);
   if (boss.variant === 'convoy') return updateConvoyBoss(boss, dt, player);
   boss.previousX = boss.x;
@@ -101,4 +104,8 @@ export function updateBoss(boss: Boss, dt: number, player: { x: number; y: numbe
     }
   }
   return shots;
+}
+
+export function bossName(variant: BossVariant): string {
+  return { commander: 'Velitel', convoy: 'Admirál konvoje', fortress: 'Ocelová pevnost', dreadnought: 'Stínový vládce' }[variant];
 }

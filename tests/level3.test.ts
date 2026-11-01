@@ -7,7 +7,7 @@ import { getLevel, hasNextLevel } from '../src/level.ts';
 import { startAtBoss, startLevel } from '../src/start-mode.ts';
 const idle = { x: 0, y: 0, fire: false };
 
-test('campaign advances from second victory with checkpoint, stops after third', () => {
+test('campaign advances from second victory with checkpoint, continues from third to fourth', () => {
   const state = createGame(false, 1);
   state.status = 'victory'; state.score = 12345;
   advanceLevel(state);
@@ -20,11 +20,12 @@ test('campaign advances from second victory with checkpoint, stops after third',
   assert.equal(state.score, 12345);
   assert.equal(state.levelIndex, 2);
   state.status = 'victory';
-  const snapshot = structuredClone(state);
   advanceLevel(state);
-  assert.deepEqual(state, snapshot);
+  assert.equal(state.levelIndex, 3);
+  assert.equal(state.checkpointScore, 12345);
   assert.equal(hasNextLevel(1), true);
-  assert.equal(hasNextLevel(2), false);
+  assert.equal(hasNextLevel(2), true);
+  assert.equal(hasNextLevel(3), false);
 });
 test('third level has sorted finite waves, new ships, drops and ground targets', () => {
   const level = getLevel(2);

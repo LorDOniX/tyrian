@@ -13,9 +13,9 @@
       <p class="stats">Skóre <strong id="score">000000</strong></p>
       <p id="section">1 / 3 · Formace</p>
       <progress id="progress" max="1" value="0" aria-label="Průběh úrovně"></progress>
-      <p id="weapon-label">Zbraň · Jeden paprsek</p>
+      <p id="weapon-label">Zbraň · 1 dělo</p>
       <progress id="weapon-timer" max="12" value="0" hidden aria-label="Zbývající čas trojstřely"></progress>
-      <p class="bonus-help"><span>◆ Trojstřela</span> · <span>+ Oprava</span></p>
+      <p class="bonus-help"><span>◆ +1 dělo</span> · <span>+ Oprava</span></p>
       <p id="bonus-notice" role="status" aria-live="polite"></p>
       <p>WASD / šipky: pohyb · Mezerník: střelba · Esc: pauza</p>
     </aside>
@@ -27,13 +27,13 @@
       <div class="hud-row"><span>ŽIVOTY</span><strong id="lives">3 / 3</strong></div>
       <progress id="hull-meter" max="3" value="3" aria-label="Životy lodi"></progress>
       <div class="hud-row credits-row"><span>KREDITY</span><strong id="credits">0</strong></div>
-      <p id="equipment">Výzbroj 1 · Štít 1 · Trup 1</p>
+      <p id="equipment">Děla 1 / 5 · Štít 1 · Trup 1</p>
     </aside>
     <aside id="boss-hud" class="boss-hud" hidden>
       <p id="boss-label">Velitel · 60 / 60</p>
       <progress id="boss-health" max="60" value="60" aria-label="Životy bosse"></progress>
     </aside>
-    <div id="debug-tools" class="debug-tools" hidden><button id="debug-level2" type="button">Debug: start levelu 2</button> <button id="debug-boss2" type="button">Debug: boss levelu 2</button><button id="debug-level3" type="button">Debug: start levelu 3</button> <button id="debug-boss3" type="button">Debug: boss levelu 3</button><button id="debug-departure" type="button">Debug: odlet</button><button id="debug-shop" type="button">Debug: hangár</button><p id="debug-airships"></p></div>
+    <div id="debug-tools" class="debug-tools" hidden><button id="debug-level2" type="button">Debug: start levelu 2</button> <button id="debug-boss2" type="button">Debug: boss levelu 2</button><button id="debug-level3" type="button">Debug: start levelu 3</button> <button id="debug-boss3" type="button">Debug: boss levelu 3</button><button id="debug-level4" type="button">Debug: start levelu 4</button><button id="debug-boss4" type="button">Debug: boss levelu 4</button><button id="debug-departure" type="button">Debug: odlet</button><button id="debug-shop" type="button">Debug: hangár</button><p id="debug-airships"></p></div>
     <button id="ship-choice" class="ship-choice" type="button">Loď: Stříbrná</button>
     <dialog id="ship-picker" aria-labelledby="ship-picker-title">
       <h2 id="ship-picker-title">Vyber loď</h2>

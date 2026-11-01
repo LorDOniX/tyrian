@@ -1,4 +1,4 @@
-import { maxLives } from './upgrades.ts';
+import { maxLives, weaponGunCount } from './upgrades.ts';
 import type { Upgrades } from './upgrades.ts';
 import { sweepHit } from './collision.ts';
 import type { MovingCircle } from './collision.ts';
@@ -42,10 +42,8 @@ export function updateBonuses(state: BonusState, dt: number): Pickup[] {
   return collected;
 }
 
+// Všechna děla leží v jedné řadě a pálí rovnoběžně dopředu.
 export function playerVolley(enhanced: boolean, weaponLevel = 0): { offsetX: number; vx: number; vy: number }[] {
-  if (!enhanced && weaponLevel === 1) return [-0.22, 0.22].map(offsetX => ({ offsetX, vx: 0, vy: 22 }));
-  return (enhanced || weaponLevel >= 2 ? [-12, 0, 12] : [0]).map(degrees => {
-    const angle = degrees * Math.PI / 180;
-    return { offsetX: Math.sign(degrees) * 0.25, vx: Math.sin(angle) * 22, vy: Math.cos(angle) * 22 };
-  });
+  const count = weaponGunCount(weaponLevel, enhanced);
+  return Array.from({ length: count }, (_, i) => ({ offsetX: (i - (count - 1) / 2) * 0.32, vx: 0, vy: 22 }));
 }
