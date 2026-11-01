@@ -43,8 +43,8 @@ Výřezy udávají souřadnice od levého horního rohu obrázku.
 
 Wraith kličkuje během sestupu a střílí za letu. Jeho střely mají rychlost 7.
 Bastion se zastaví v horní části obrazovky; střídá vějíře posunuté o 10 stupňů
-s rychlostí střel 6,3. Při poklesu zdraví na 3 nebo méně přejde na druhý sprite
-z výřezu (144, 84, 24, 28). Rotor se plynule otáčí a další kruhovou salvu
+s rychlostí střel 6,3. Oba jeho sprity tvoří zadní a přední díl, každý se
+samostatným zdravím a možností ustřelení; opravu popisuje [fáze 18](faze18.md). Rotor se plynule otáčí a další kruhovou salvu
 pootočí o 30 stupňů; rychlost střel je 5,5.
 
 Nové lodě už v předloze směřují dolů. Nemají převzaté přepínání snímků

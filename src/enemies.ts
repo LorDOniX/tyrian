@@ -15,6 +15,7 @@ export const ENEMY_TYPES = {
   spreader: { hp: 3, radius: 0.85, speed: 3.5, score: 300, interval: 1.25, volleys: 2, stopY: 6.5, clip: 'spreaderShip' },
   pulsar: { hp: 3, radius: 0.9, speed: 3, score: 400, interval: 1.6, volleys: 2, stopY: 8, clip: 'pulsarShip' },
 } as const;
+export const BASTION_PART_OFFSET = 1.05;
 export type EnemyPart = { frame: 0 | 1; offsetY: number; hp: number; hitLeft: number };
 export type EnemyCircle = MovingCircle & { part?: EnemyPart };
 export type Enemy = MovingCircle & {
@@ -30,8 +31,8 @@ export function createEnemy(id: number, kind: EnemyKind, x: number, y: number, d
     radius: type.radius, speed: type.speed, hp: type.hp,
     phase: 'entering', shotLeft: type.interval, shots: 0, hitLeft: 0,
     ...(kind === 'bastion' ? { parts: [
-      { frame: 0 as const, offsetY: 1.225, hp: 4, hitLeft: 0 },
-      { frame: 1 as const, offsetY: -1.225, hp: 3, hitLeft: 0 },
+      { frame: 0 as const, offsetY: BASTION_PART_OFFSET, hp: 4, hitLeft: 0 },
+      { frame: 1 as const, offsetY: -BASTION_PART_OFFSET, hp: 3, hitLeft: 0 },
     ] } : {}) };
 }
 

@@ -203,7 +203,8 @@ export async function createScene(container: HTMLElement) {
       }
       if (enemy.drop) {
         const halo = new THREE.Mesh(debugGeometry, enemy.drop === 'spread' ? spreadHalo : repairHalo);
-        halo.scale.setScalar(1.05);
+        if (enemy.kind === 'bastion') halo.scale.set(1.15, 2.4, 1);
+        else halo.scale.setScalar(1.05);
         halo.renderOrder = 5;
         model.add(halo);
       }

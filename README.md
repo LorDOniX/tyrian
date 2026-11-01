@@ -18,6 +18,7 @@ typy nepřátel z `newsh2`, bosse z `newsh4` a dvojnásobné ceny v hangáru. [F
 a mění štíty na samostatnou zásobu pro každý život. [Fáze 16](faze16.md)
 přidává výzbroj s jedním až pěti děly vedle sebe. [Fáze 17](faze17.md)
 používá sprite kanóny z `newshs` a mění dočasný bonus na jedno dělo navíc.
+[Fáze 18](faze18.md) skládá fialové Bastiony ze dvou samostatně zničitelných dílů.
 
 ## Spuštění
 

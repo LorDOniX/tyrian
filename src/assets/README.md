@@ -53,3 +53,7 @@ Pozemní kanóny používají `newshs`: otočná hlava má výřezy
 (192, 56, 24, 28) a (192, 84, 24, 28), pevná základna (0, 196, 24, 28).
 Přibyly klipy `groundCannon` a `groundCannonBase`, celkem tři snímky.
 Při přípravě výstřelu se použije rozsvícená varianta hlavy. Více ve `faze17.md`.
+
+Dva snímky `bastionShip` z `newsh2` jsou dvě části téhož trupu, nikoli
+varianty poškození. Ve hře se vykreslují současně za sebou a každý díl
+má vlastní zdraví; detaily jsou ve `faze18.md`.
