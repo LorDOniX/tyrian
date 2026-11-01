@@ -11,6 +11,10 @@ const shipFrames = (y: number) => [0, 48, 96].map(x => ({
 }));
 
 export const SPRITE_CLIPS = {
+  weaverShip: { start: 53, fps: 1, loop: true, size: 2.3, width: 1, referenceCell: 32, frames: shipFrames(84) },
+  strikerShip: { start: 56, fps: 1, loop: true, size: 2.6, width: 1, referenceCell: 32, frames: shipFrames(112) },
+  fortressBoss: { start: 59, fps: 1, loop: true, size: 6.4, width: 208 / 144, referenceCell: 32,
+    frames: [{ source: 'newsho.shp.000000.png', x: 0, y: 0, width: 192, height: 140 }] },
   convoyBoss: { start: 49, fps: 1, loop: true, size: 3.2, width: 2.5, referenceCell: 32,
     frames: [0, 84].map(y => ({ source: 'newsht.shp.000000.png', x: 0, y, width: 144, height: 56 })) },
   convoyLeftGun: { start: 51, fps: 1, loop: true, size: 1.6, width: 1, referenceCell: 32,
@@ -57,6 +61,7 @@ export function spriteFrame(name: SpriteClip, age: number): number | null {
 
 // Velké trupy mají vlastní obdélníky pod řadami malých snímků.
 export function atlasRegion(index: number) {
+  if (index === 59) return { x: 256, y: 256, width: 208, height: 144 };
   if (index === 49 || index === 50) return { x: 256, y: 128 + (index - 49) * 64, width: 160, height: 64 };
   if (index === 47 || index === 48) return { x: (index - 47) * 128, y: 128, width: 128, height: 160 };
   return { x: index % ATLAS.columns * ATLAS.cell, y: Math.floor(index / ATLAS.columns) * ATLAS.cell,

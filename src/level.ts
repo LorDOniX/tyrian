@@ -44,6 +44,12 @@ export const LEVEL_EVENTS: readonly SpawnEvent[] = Object.freeze(
 );
 
 export function levelPart(time: number, index: LevelIndex = 0): string {
+  if (index === 2) {
+    if (time >= getLevel(2).duration) return 'Dokonči souboj';
+    if (time >= 36) return '3 / 3 · Obrana pevnosti';
+    if (time >= 18) return '2 / 3 · Křížová palba';
+    return '1 / 3 · Průlom';
+  }
   if (index === 1) {
     if (time >= getLevel(1).duration) return 'Dokonči souboj';
     if (time >= 32) return '3 / 3 · Těžký konvoj';
@@ -62,7 +68,7 @@ export const GROUND_TARGETS: readonly Readonly<{ x: number; levelY: number }>[] 
   Object.freeze({ x: 0, levelY: 185 }),  // 43. sekunda
 ]);
 
-export type LevelIndex = 0 | 1;
+export type LevelIndex = 0 | 1 | 2;
 export type LevelDefinition = Readonly<{
   name: string; duration: number; events: readonly SpawnEvent[];
   groundTargets: readonly Readonly<{ x: number; levelY: number }>[]; boss: boolean; bossVariant?: BossVariant;
@@ -83,10 +89,33 @@ escort(30, 'scout', [-4, 0, 4], 'repair');
 escort(34, 'airship', [-3.5, 3.5]);
 escort(38, 'pulsar', [0]);
 escort(41, 'interceptor', [-5, 5]);
+const fortress: SpawnEvent[] = [];
+const wave = (at: number, kind: EnemyKind, xs: number[], drop?: PickupKind) => {
+  xs.forEach(x => fortress.push({ at, kind, x, y: kind === 'airship' ? 18 : 13, drop }));
+};
+wave(1, 'weaver', [-5, 0, 5]);
+wave(5, 'striker', [-4, 4], 'spread');
+wave(9, 'interceptor', [-5, 0, 5]);
+wave(13, 'weaver', [-5, 0, 5], 'repair');
+wave(18, 'striker', [-5, 0, 5]);
+wave(22, 'pulsar', [-4, 4]);
+wave(25, 'weaver', [-6, -2, 2, 6]);
+wave(29, 'airship', [0], 'spread');
+wave(33, 'striker', [-5, 5]);
+wave(37, 'weaver', [-5, 0, 5], 'repair');
+wave(41, 'striker', [-4, 4]);
+wave(45, 'interceptor', [-5, 0, 5]);
+wave(48, 'pulsar', [0]);
 export const LEVELS: readonly LevelDefinition[] = Object.freeze([
   Object.freeze({ name: 'Základna', duration: LEVEL_DURATION, events: LEVEL_EVENTS, groundTargets: GROUND_TARGETS, boss: true, bossVariant: 'commander' }),
   Object.freeze({ name: 'Vzdušný konvoj', duration: 48,
     events: Object.freeze(convoy.sort((a, b) => a.at - b.at).map(event => Object.freeze(event))),
     groundTargets: Object.freeze([]), boss: true, bossVariant: 'convoy' }),
+  Object.freeze({ name: 'Ocelová pevnost', duration: 56,
+    events: Object.freeze(fortress.sort((a, b) => a.at - b.at).map(event => Object.freeze(event))),
+    groundTargets: Object.freeze([{ x: -5, levelY: 65 }, { x: 5, levelY: 137 }, { x: 0, levelY: 193 }]),
+    boss: true, bossVariant: 'fortress' }),
 ]);
 export function getLevel(index: LevelIndex): LevelDefinition { return LEVELS[index]!; }
+
+export function hasNextLevel(index: LevelIndex): boolean { return index + 1 < LEVELS.length; }

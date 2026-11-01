@@ -1,8 +1,10 @@
 import type { MovingCircle } from './collision.ts';
 import type { PickupKind } from './bonuses.ts';
 
-export type EnemyKind = 'scout' | 'gunner' | 'interceptor' | 'spreader' | 'pulsar' | 'airship';
+export type EnemyKind = 'scout' | 'gunner' | 'interceptor' | 'spreader' | 'pulsar' | 'airship' | 'weaver' | 'striker';
 export const ENEMY_TYPES = {
+  weaver: { hp: 2, radius: 0.7, speed: 3.5, score: 250, interval: 1.2, volleys: 3, stopY: 7, clip: 'weaverShip' },
+  striker: { hp: 4, radius: 0.85, speed: 3.5, score: 450, interval: 1.4, volleys: 3, stopY: 7, clip: 'strikerShip' },
   airship: { hp: 16, radius: 1.65, speed: 2, score: 1000, interval: 1.8, volleys: 3, stopY: 6, clip: 'airship' },
   scout: { hp: 1, radius: 0.6, speed: 4, score: 100, interval: 0.8, volleys: 0, stopY: 7, clip: 'scoutShip' },
   gunner: { hp: 2, radius: 0.75, speed: 4, score: 250, interval: 0.8, volleys: 3, stopY: 7, clip: 'gunnerShip' },
@@ -39,8 +41,8 @@ export function enemySpritePose(enemy: Enemy): number {
 }
 
 export function enemyCanCharge(enemy: Enemy): boolean {
-  return enemy.kind === 'interceptor'
-    ? enemy.y + enemy.radius <= 12 && enemy.y - enemy.radius >= -10 && enemy.shots < ENEMY_TYPES.interceptor.volleys
+  return (enemy.kind === 'interceptor' || enemy.kind === 'weaver')
+    ? enemy.y + enemy.radius <= 12 && enemy.y - enemy.radius >= -10 && enemy.shots < ENEMY_TYPES[enemy.kind].volleys
     : enemy.phase === 'charging' && enemy.kind !== 'scout';
 }
 
@@ -52,9 +54,9 @@ export function updateEnemy(enemy: Enemy, dt: number): boolean {
   enemy.originX ??= enemy.x;
   enemy.age = (enemy.age ?? 0) + dt;
   const type = ENEMY_TYPES[enemy.kind];
-  if (enemy.kind === 'scout' || enemy.kind === 'interceptor' || enemy.phase === 'leaving') {
+  if (enemy.kind === 'scout' || enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.phase === 'leaving') {
     enemy.y -= enemy.speed * dt;
-    if (enemy.kind === 'interceptor') {
+    if (enemy.kind === 'interceptor' || enemy.kind === 'weaver') {
       enemy.x = Math.max(-7.5, Math.min(7.5, enemy.originX + Math.sin(enemy.age * 1.8) * 1.5));
       if (enemyCanCharge(enemy)) {
         enemy.shotLeft -= dt;
@@ -87,13 +89,16 @@ export function enemyVolley(enemy: Enemy, player: { x: number; y: number }): Ene
       const length = Math.hypot(dx, dy);
       return { ...from, vx: length > 0 ? dx / length * 5 : 0, vy: length > 0 ? dy / length * 5 : -5 };
     });
-  } else if (enemy.kind === 'gunner') {
+  } else if (enemy.kind === 'gunner' || enemy.kind === 'weaver') {
     const dx = player.x - x;
     const dy = player.y - y;
     const length = Math.hypot(dx, dy);
     shots = [{ x, y, vx: length > 0 ? dx / length * 6 : 0, vy: length > 0 ? dy / length * 6 : -6 }];
   } else if (enemy.kind === 'interceptor') {
     shots = [-0.3, 0.3].map(offset => ({ x: x + offset, y, vx: 0, vy: -7 }));
+  } else if (enemy.kind === 'striker') {
+    shots = [-0.55, 0.55].flatMap(offset => [-16, 16].map(angle => ({ x: x + offset, y,
+      vx: Math.sin(angle * Math.PI / 180) * 6, vy: -Math.cos(angle * Math.PI / 180) * 6 })));
   } else if (enemy.kind === 'spreader') {
     shots = [-24, 0, 24].map(angle => ({ x, y,
       vx: Math.sin(angle * Math.PI / 180) * 5.5, vy: -Math.cos(angle * Math.PI / 180) * 5.5 }));
@@ -107,6 +112,6 @@ export function enemyVolley(enemy: Enemy, player: { x: number; y: number }): Ene
   } else return [];
   enemy.shots++;
   enemy.shotLeft = type.interval;
-  if (enemy.kind !== 'interceptor' && enemy.shots >= type.volleys) enemy.phase = 'leaving';
+  if (enemy.kind !== 'interceptor' && enemy.kind !== 'weaver' && enemy.shots >= type.volleys) enemy.phase = 'leaving';
   return shots;
 }

@@ -9,7 +9,7 @@ import { createBoss, updateBoss, bossCircles } from './boss.ts';
 import type { Boss } from './boss.ts';
 import { circlesOverlap, sweepHit } from './collision.ts';
 import type { MovingCircle } from './collision.ts';
-import { getLevel } from './level.ts';
+import { getLevel, hasNextLevel } from './level.ts';
 import type { LevelIndex } from './level.ts';
 
 export const WORLD_WIDTH = 18;
@@ -54,9 +54,9 @@ export function restartGame(state: GameState): void {
   Object.assign(state, createGame(false, levelIndex), { score: checkpointScore, checkpointScore });
 }
 export function advanceLevel(state: GameState): void {
-  if (state.status !== 'victory' || state.levelIndex !== 0) return;
+  if (state.status !== 'victory' || !hasNextLevel(state.levelIndex)) return;
   const checkpointScore = state.score;
-  Object.assign(state, createGame(false, 1), { score: checkpointScore, checkpointScore });
+  Object.assign(state, createGame(false, (state.levelIndex + 1) as LevelIndex), { score: checkpointScore, checkpointScore });
 }
 export function pauseGame(state: GameState): void { if (state.status === 'playing') state.status = 'paused'; }
 export function resumeGame(state: GameState): void { if (state.status === 'paused') state.status = 'playing'; }
@@ -130,7 +130,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     state.stageTimer = Math.max(0, previous - dt);
     if (Math.floor(previous / 0.15) !== Math.floor(state.stageTimer / 0.15) && state.boss) {
       const offset = Math.floor(previous / 0.15) % 3 - 1;
-      state.effects.push({ id: state.nextId++, x: state.boss.x + offset * (state.boss.variant === 'convoy' ? 3 : 1.5), y: state.boss.y + offset * 0.5, age: 0, kind: 'explosion', scale: 1.2 });
+      state.effects.push({ id: state.nextId++, x: state.boss.x + offset * (state.boss.variant !== 'commander' ? 3 : 1.5), y: state.boss.y + offset * 0.5, age: 0, kind: 'explosion', scale: 1.2 });
     }
     if (state.stageTimer === 0) state.status = 'victory';
     return;
@@ -205,15 +205,15 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       enemy.mode = 'destroyed';
       state.missionStage = 'bossDestroyed';
       state.pickups = [];
-      state.stageTimer = enemy.variant === 'convoy' ? 1.5 : 1;
-      if (enemy.variant === 'convoy') {
+      state.stageTimer = enemy.variant !== 'commander' ? 1.5 : 1;
+      if (enemy.variant !== 'commander') {
         effect('explosion', enemy.x - 3, enemy.y - 0.7, 1.3);
         effect('explosion', enemy.x + 3, enemy.y - 0.7, 1.3);
       }
       state.bullets = state.bullets.filter(bullet => bullet.owner === 'player');
     }
     if (enemy.kind === 'turret') state.wrecks.push({ id: enemy.id, x: enemy.x, levelY: enemy.levelY, y: enemy.y });
-    state.score += enemy.kind === 'boss' ? (enemy.variant === 'convoy' ? 5000 : 2000) : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
+    state.score += enemy.kind === 'boss' ? (enemy.variant === 'fortress' ? 7500 : enemy.variant === 'convoy' ? 5000 : 2000) : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
     explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
       enemy.previousY + (enemy.y - enemy.previousY) * time);
     if (enemy.kind === 'airship') {

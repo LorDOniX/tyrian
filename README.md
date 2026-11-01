@@ -10,7 +10,7 @@ sprite exploze, zásahy a projektily z přidaných Tyrian assetů. [Fáze 7](faz
 přidává sbíratelnou opravu a dočasnou trojstřelu. [Fáze 8](faze8.md) mění běžné
 lodě na Tyrian sprity a rozšiřuje flotilu na 50 lodí pěti typů. [Fáze 9](faze9.md)
 přidává druhý level se vzducholoděmi, poškozenými variantami trupu a debug startem.
-[Fáze 10](faze10.md) ho zakončuje sprite bossem z `newsht.shp.000000.png`. Zachovává 3 životy, skóre, pauzu a restart.
+[Fáze 10](faze10.md) ho zakončuje sprite bossem z `newsht.shp.000000.png`. [Fáze 11](faze11.md) přidává třetí level Ocelová pevnost, dva nové typy lodí a finálního bosse z `newsho.shp.000000.png`. Zachovává 3 životy, skóre, pauzu a restart.
 
 ## Spuštění
 
@@ -28,12 +28,15 @@ Pro testy používej Node.js 22.18+ (nebo novější podporovanou řadu).
 Pro ladění závěrečného souboje: `npm run dev -- --mode boss`.
 Přímo do druhého levelu: `npm run dev:level2`. K jeho bossovi: `npm run dev:boss2`. Ve vývoji lze použít i tlačítko
 „Debug: start levelu 2“. Po vítězství v prvním levelu Enter přejde do druhého;
-po prohře restartuje aktuální level. Produkční hra vždy začíná levelem 1.
+po druhém levelu přejde do třetího. Po prohře restartuje aktuální level.
+Třetí level lze spustit přímo příkazem `npm run dev:level3`, jeho bosse `npm run dev:boss3`. Produkční hra vždy začíná levelem 1.
 
 ## Příkazy
 
 - `npm run dev` – vývojový server.
 - `npm run dev:level2` – vývojový start přímo ve druhém levelu.
+- `npm run dev:level3` – vývojový start ve třetím levelu.
+- `npm run dev:boss3` – vývojový start před bossem třetího levelu.
 - `npm run dev:boss2` – vývojový start přímo před bossem druhého levelu.
 - `npm run assets:prepare` – volitelné obnovení sprite atlasu ze zdrojů (vyžaduje FFmpeg).
 - `npm test` – testy kolizí a herních pravidel.
@@ -47,10 +50,12 @@ po prohře restartuje aktuální level. Produkční hra vždy začíná levelem 
 - `src/level.ts` – časované formace a části úrovně.
 - `src/convoy-boss.ts` – pravidla a útoky admirála konvoje.
 - `src/convoy-boss-model.ts` – sprite model, rozsvícené hlavně a štít.
+- `src/fortress-boss.ts` – tři útoky a dvě fáze finálního bosse.
+- `src/fortress-boss-model.ts` – trup newsho, světla hlavní a příletový štít.
 - `src/boss.ts` – pravidla souboje a útoků.
 - `src/boss-model.ts` – 3D model a vizuální signalizace.
-- `src/start-mode.ts` – vývojové vstupy k bossovi a do druhého levelu.
-- `src/enemies.ts` – typy nepřátel, pohyb a čtyři vzory střelby.
+- `src/start-mode.ts` – vývojové vstupy do jednotlivých misí a soubojů.
+- `src/enemies.ts` – typy nepřátel, pohyb a vzory střelby.
 - `src/bonuses.ts` – bonusy, opravy a dočasná trojstřela.
 - `src/game.ts` – herní stav a pravidla bez Three.js.
 - `src/collision.ts` – kolizní výpočty ve 2D.

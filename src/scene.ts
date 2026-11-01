@@ -1,3 +1,4 @@
+import { createFortressBossModel } from './fortress-boss-model.ts';
 import { createConvoyBossModel } from './convoy-boss-model.ts';
 import { ENEMY_TYPES, enemyCanCharge, enemySpritePose, enemyCircles } from './enemies.ts';
 import { createSpriteEffects } from './sprite-effects.ts';
@@ -32,6 +33,7 @@ export async function createScene(container: HTMLElement) {
 
   const terrain = createTerrain(scene);
   const bossModel = createBossModel(scene);
+  const fortressBossModel = createFortressBossModel(scene, sprites);
   const convoyBossModel = createConvoyBossModel(scene, sprites);
 
   // Skutečné 3D objemy, sestavené do jedné lodi.
@@ -265,6 +267,7 @@ export async function createScene(container: HTMLElement) {
         model.renderOrder = 30;
       });
     bossModel.render(state.boss?.variant === 'commander' ? state.boss : null, state.time, state.stageTimer);
+    fortressBossModel.render(state.boss, state.time, state.stageTimer);
     convoyBossModel.render(state.boss, state.time, state.stageTimer);
     terrain.render(state.scrollDistance, state.player.x, state.player.y, showTerrain, ship.visible, state.levelIndex);
     for (const { stars, positions, original, speed } of starLayers) {
@@ -282,6 +285,7 @@ export async function createScene(container: HTMLElement) {
     observer.disconnect();
     terrain.dispose();
     bossModel.dispose();
+    fortressBossModel.dispose();
     convoyBossModel.dispose();
     // Sprity vlastní svůj sdílený materiál, geometrii a texturu.
     for (const models of [bulletModels, enemyModels, effectModels, pickupModels]) {
