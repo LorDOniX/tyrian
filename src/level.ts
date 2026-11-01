@@ -1,3 +1,4 @@
+import type { GroundWeapon } from './ground-weapons.ts';
 import type { BossVariant } from './boss.ts';
 import type { PickupKind } from './bonuses.ts';
 import type { EnemyKind } from './enemies.ts';
@@ -77,7 +78,7 @@ export const GROUND_TARGETS: readonly Readonly<{ x: number; levelY: number }>[] 
 export type LevelIndex = 0 | 1 | 2 | 3;
 export type LevelDefinition = Readonly<{
   name: string; duration: number; events: readonly SpawnEvent[];
-  groundTargets: readonly Readonly<{ x: number; levelY: number }>[]; boss: boolean; bossVariant?: BossVariant;
+  groundTargets: readonly Readonly<{ x: number; levelY: number; weapon?: GroundWeapon }>[]; boss: boolean; bossVariant?: BossVariant;
 }>;
 const convoy: SpawnEvent[] = [];
 const escort = (at: number, kind: EnemyKind, xs: number[], drop?: PickupKind) => {
@@ -112,6 +113,11 @@ wave(37, 'weaver', [-5, 0, 5], 'repair');
 wave(41, 'striker', [-4, 4]);
 wave(45, 'interceptor', [-5, 0, 5]);
 wave(48, 'pulsar', [0]);
+wave(6, 'rockSmall', [-5, 5]);
+wave(17, 'rockLarge', [0]);
+wave(26, 'rockSmall', [-6, 2]);
+wave(35, 'rockLarge', [-4, 4]);
+wave(46, 'rockSmall', [-3, 3]);
 const foundry: SpawnEvent[] = [];
 const foundryWave = (at: number, kind: EnemyKind, xs: number[], drop?: PickupKind) => {
   xs.forEach(x => foundry.push({ at, kind, x, y: 14, drop }));
@@ -132,6 +138,14 @@ foundryWave(45, 'wraith', [-5, 0, 5]);
 foundryWave(49, 'bastion', [-4, 4]);
 foundryWave(53, 'rotor', [0], 'repair');
 foundryWave(57, 'wraith', [-5, 0, 5]);
+foundryWave(3, 'rockSmall', [-6, 2]);
+foundryWave(11, 'rockLarge', [0]);
+foundryWave(19, 'rockSmall', [-3, 3]);
+foundryWave(28, 'rockLarge', [-5, 5]);
+foundryWave(35, 'rockSmall', [-6, 0, 6]);
+foundryWave(43, 'rockLarge', [0]);
+foundryWave(51, 'rockSmall', [-5, 5]);
+foundryWave(59, 'rockLarge', [-3, 3]);
 export const LEVELS: readonly LevelDefinition[] = Object.freeze([
   Object.freeze({ name: 'Základna', duration: LEVEL_DURATION, events: LEVEL_EVENTS, groundTargets: GROUND_TARGETS, boss: true, bossVariant: 'commander' }),
   Object.freeze({ name: 'Vzdušný konvoj', duration: 48,
@@ -139,12 +153,15 @@ export const LEVELS: readonly LevelDefinition[] = Object.freeze([
     groundTargets: Object.freeze([]), boss: true, bossVariant: 'convoy' }),
   Object.freeze({ name: 'Ocelová pevnost', duration: 56,
     events: Object.freeze(fortress.sort((a, b) => a.at - b.at).map(event => Object.freeze(event))),
-    groundTargets: Object.freeze([{ x: -5, levelY: 65 }, { x: 5, levelY: 137 }, { x: 0, levelY: 193 }]),
+    groundTargets: Object.freeze([{ x: -5, levelY: 65 }, { x: 5, levelY: 101, weapon: 'twinGold' as const },
+      { x: 5, levelY: 137 }, { x: -5, levelY: 169, weapon: 'twinSteel' as const }, { x: 0, levelY: 193 }]),
     boss: true, bossVariant: 'fortress' }),
   Object.freeze({ name: 'Slévárna stínů', duration: 64,
-    events: Object.freeze(foundry.map(event => Object.freeze(event))),
-    groundTargets: Object.freeze([{ x: -5, levelY: 49 }, { x: 5, levelY: 85 },
-      { x: -4, levelY: 137 }, { x: 4, levelY: 169 }, { x: 0, levelY: 225 }]),
+    events: Object.freeze(foundry.sort((a, b) => a.at - b.at).map(event => Object.freeze(event))),
+    groundTargets: Object.freeze([{ x: 4, levelY: 33, weapon: 'twinSteel' as const },
+      { x: -5, levelY: 49 }, { x: -2, levelY: 65, weapon: 'twinGold' as const }, { x: 5, levelY: 85 },
+      { x: -5, levelY: 113, weapon: 'twinSteel' as const }, { x: -4, levelY: 137 }, { x: 4, levelY: 169 },
+      { x: 5, levelY: 201, weapon: 'twinGold' as const }, { x: 0, levelY: 225 }]),
     boss: true, bossVariant: 'dreadnought' }),
 ]);
 export function getLevel(index: LevelIndex): LevelDefinition { return LEVELS[index]!; }

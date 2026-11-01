@@ -14,6 +14,14 @@ const shipFrames = (y: number) => [0, 48, 96].map(x => ({
 
 export const SPRITE_CLIPS = {
   ...PLAYER_SHIP_CLIPS,
+  smallRock: { start: 116, fps: 1, loop: true, size: 1.8, width: 1, referenceCell: 32,
+    frames: [{ source: 'newshd.shp.000000.png', x: 48, y: 0, width: 24, height: 28 }] },
+  largeRock: { start: 117, fps: 1, loop: true, size: 3, width: 1, referenceCell: 32,
+    frames: [{ source: 'newshd.shp.000000.png', x: 48, y: 28, width: 24, height: 28 }] },
+  twinSteelCannon: { start: 110, fps: 1, loop: true, size: 2, width: 1, referenceCell: 32,
+    frames: [96, 120, 144].map(x => ({ source: 'newshd.shp.000000.png', x, y: 196, width: 24, height: 28 })) },
+  twinGoldCannon: { start: 113, fps: 1, loop: true, size: 2, width: 1, referenceCell: 32,
+    frames: [24, 48, 72].map(x => ({ source: 'newshd.shp.000000.png', x, y: 56, width: 24, height: 28 })) },
   groundCannon: { start: 107, fps: 1, loop: true, size: 2, width: 1, referenceCell: 32,
     frames: [56, 84].map(y => ({ source: 'newshs.shp.000000.png', x: 192, y, width: 24, height: 28 })) },
   groundCannonBase: { start: 109, fps: 1, loop: true, size: 2.2, width: 1, referenceCell: 32,
@@ -76,6 +84,9 @@ export function spriteFrame(name: SpriteClip, age: number): number | null {
 
 // Velké trupy mají vlastní obdélníky pod řadami malých snímků.
 export function atlasRegion(index: number) {
+  if (index === 116) return { x: 480, y: 192, width: 32, height: 32 };
+  if (index === 117) return { x: 416, y: 224, width: 32, height: 32 };
+  if (index >= 110 && index <= 115) return { x: 320 + (index - 110) * 32, y: 480, width: 32, height: 32 };
   if (index === 107) return { x: 480, y: 160, width: 32, height: 32 };
   if (index === 108 || index === 109) return { x: 416 + (index - 108) * 32, y: 192, width: 32, height: 32 };
   if (index === 101) return { x: 416, y: 128, width: 64, height: 32 };

@@ -1,8 +1,10 @@
 import type { MovingCircle } from './collision.ts';
 import type { PickupKind } from './bonuses.ts';
 
-export type EnemyKind = 'scout' | 'gunner' | 'interceptor' | 'spreader' | 'pulsar' | 'airship' | 'weaver' | 'striker' | 'wraith' | 'bastion' | 'rotor';
+export type EnemyKind = 'scout' | 'gunner' | 'interceptor' | 'spreader' | 'pulsar' | 'airship' | 'weaver' | 'striker' | 'wraith' | 'bastion' | 'rotor' | 'rockSmall' | 'rockLarge';
 export const ENEMY_TYPES = {
+  rockSmall: { hp: 2, radius: 0.6, speed: 4.5, score: 0, interval: 0, volleys: 0, stopY: 0, clip: 'smallRock' },
+  rockLarge: { hp: 4, radius: 0.9, speed: 3.5, score: 0, interval: 0, volleys: 0, stopY: 0, clip: 'largeRock' },
   wraith: { hp: 4, radius: 1.05, speed: 5.2, score: 450, interval: 0.9, volleys: 3, stopY: 7, clip: 'wraithShip' },
   bastion: { hp: 7, radius: 0.95, speed: 3.6, score: 600, interval: 1, volleys: 4, stopY: 7.5, clip: 'bastionShip' },
   rotor: { hp: 3, radius: 0.8, speed: 4.2, score: 350, interval: 1.1, volleys: 3, stopY: 6.5, clip: 'rotorShip' },
@@ -15,6 +17,7 @@ export const ENEMY_TYPES = {
   spreader: { hp: 3, radius: 0.85, speed: 3.5, score: 300, interval: 1.25, volleys: 2, stopY: 6.5, clip: 'spreaderShip' },
   pulsar: { hp: 3, radius: 0.9, speed: 3, score: 400, interval: 1.6, volleys: 2, stopY: 8, clip: 'pulsarShip' },
 } as const;
+export const isRock = (kind: EnemyKind): boolean => kind === 'rockSmall' || kind === 'rockLarge';
 export const BASTION_PART_OFFSET = 1.05;
 export type EnemyPart = { frame: 0 | 1; offsetY: number; hp: number; hitLeft: number };
 export type EnemyCircle = MovingCircle & { part?: EnemyPart };
@@ -27,7 +30,7 @@ export type EnemyShot = { x: number; y: number; vx: number; vy: number };
 
 export function createEnemy(id: number, kind: EnemyKind, x: number, y: number, drop?: PickupKind): Enemy {
   const type = ENEMY_TYPES[kind];
-  return { id, kind, x, y, previousX: x, previousY: y, originX: x, age: 0, drop,
+  return { id, kind, x, y, previousX: x, previousY: y, originX: x, age: 0, drop: isRock(kind) ? undefined : drop,
     radius: type.radius, speed: type.speed, hp: type.hp,
     phase: 'entering', shotLeft: type.interval, shots: 0, hitLeft: 0,
     ...(kind === 'bastion' ? { parts: [
@@ -58,6 +61,7 @@ export function bastionMuzzleY(enemy: Enemy): number {
   return enemy.y + (surviving?.offsetY ?? 0) - 0.8;
 }
 export function enemySpritePose(enemy: Enemy): number {
+  if (isRock(enemy.kind)) return 0;
   if (enemy.kind === 'airship') return enemy.hp < ENEMY_TYPES.airship.hp ? 1 : 0;
   if (enemy.kind === 'weaver') return 1;
   if (enemy.kind === 'bastion') return 0;
@@ -66,6 +70,7 @@ export function enemySpritePose(enemy: Enemy): number {
 }
 
 export function enemyCanCharge(enemy: Enemy): boolean {
+  if (isRock(enemy.kind)) return false;
   return (enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith')
     ? enemy.y + enemy.radius <= 12 && enemy.y - enemy.radius >= -10 && enemy.shots < ENEMY_TYPES[enemy.kind].volleys
     : enemy.phase === 'charging' && enemy.kind !== 'scout';
@@ -80,7 +85,7 @@ export function updateEnemy(enemy: Enemy, dt: number): boolean {
   enemy.originX ??= enemy.x;
   enemy.age = (enemy.age ?? 0) + dt;
   const type = ENEMY_TYPES[enemy.kind];
-  if (enemy.kind === 'scout' || enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith' || enemy.phase === 'leaving') {
+  if (isRock(enemy.kind) || enemy.kind === 'scout' || enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith' || enemy.phase === 'leaving') {
     enemy.y -= enemy.speed * dt;
     if (enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith') {
       enemy.x = Math.max(-7.5, Math.min(7.5, enemy.originX + Math.sin(enemy.age * (enemy.kind === 'wraith' ? 2.4 : 1.8)) * (enemy.kind === 'wraith' ? 1.7 : 1.5)));

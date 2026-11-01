@@ -1,3 +1,5 @@
+import { groundVolley } from './ground-weapons.ts';
+import type { GroundWeapon } from './ground-weapons.ts';
 import { freshUpgrades, maxShield, maxLives, weaponCooldown, upgradeCost } from './upgrades.ts';
 import type { Upgrades, UpgradeKind } from './upgrades.ts';
 import { createEnemy, updateEnemy, enemyVolley, ENEMY_TYPES, enemyCircles, enemyExtent } from './enemies.ts';
@@ -20,7 +22,7 @@ export type Body = MovingCircle & { id: number; speed: number };
 export const SCROLL_SPEED = 4;
 export const TURRET_EXTENT = 1.2;
 export type GroundTarget = Body & {
-  kind: 'turret'; levelY: number; hp: number; shotLeft: number; hitLeft: number;
+  kind: 'turret'; weapon?: GroundWeapon; levelY: number; hp: number; shotLeft: number; hitLeft: number;
 };
 export type Wreck = { id: number; x: number; levelY: number; y: number };
 export type Bullet = Body & { owner: 'player' | 'enemy'; vx: number; vy: number };
@@ -149,7 +151,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   while (state.nextGround < level.groundTargets.length &&
     level.groundTargets[state.nextGround]!.levelY - state.scrollDistance <= 13) {
     const target = level.groundTargets[state.nextGround++]!;
-    state.groundTargets.push({ id: state.nextId++, kind: 'turret', x: target.x,
+    state.groundTargets.push({ id: state.nextId++, kind: 'turret', weapon: target.weapon ?? 'single', x: target.x,
       levelY: target.levelY, y: target.levelY - previousDistance,
       previousX: target.x, previousY: target.levelY - previousDistance,
       radius: 0.7, speed: SCROLL_SPEED, hp: 2, shotLeft: 1.5, hitLeft: 0 });
@@ -338,11 +340,9 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   }
   for (const target of pendingGround) {
     if (deadEnemies.has(target.id) || state.lives === 0) continue;
-    const { vx, vy } = aimVelocity(target, player, 6);
-    // Ústí hlavně je 1,05 jednotky od středu. Zblízka nepřeskočíme hráče.
-    const muzzleOffset = Math.min(1.05, Math.hypot(player.x - target.x, player.y - target.y));
-    state.bullets.push(makeBullet(state, target.x + vx / 6 * muzzleOffset,
-      target.y + vy / 6 * muzzleOffset, 'enemy', vx, vy));
+    for (const shot of groundVolley(target, player, target.weapon ?? 'single')) {
+      state.bullets.push(makeBullet(state, shot.x, shot.y, 'enemy', shot.vx, shot.vy));
+    }
     target.shotLeft = 1.5;
   }
   if (state.boss?.mode !== 'destroyed' && state.lives > 0) {

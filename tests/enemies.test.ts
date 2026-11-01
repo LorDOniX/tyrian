@@ -28,13 +28,14 @@ test('every type has complete Tyrian poses with matching atlas capacity', () => 
     assert.equal(enemy.radius, ENEMY_TYPES[kind].radius);
     const clip = SPRITE_CLIPS[ENEMY_TYPES[kind].clip];
     const newSheet = ['wraith', 'bastion', 'rotor'].includes(kind);
-    assert.equal(clip.frames.length, kind === 'airship' || kind === 'bastion' ? 2 : newSheet ? 1 : 3);
+    const rock = kind === 'rockSmall' || kind === 'rockLarge';
+    assert.equal(clip.frames.length, kind === 'airship' || kind === 'bastion' ? 2 : newSheet || rock ? 1 : 3);
     assert.equal(starts.has(clip.start), false);
     starts.add(clip.start);
     for (const frame of clip.frames) {
       assert.equal(frame.width, kind === 'airship' ? 96 : kind === 'wraith' ? 48 : 24);
       assert.equal(frame.height, kind === 'airship' ? 140 : 28);
-      assert.equal(frame.source, kind === 'airship' ? 'newshi.shp.000000.png' : newSheet ? 'newsh2.shp.000000.png' : 'newsh$.shp.000000.png');
+      assert.equal(frame.source, kind === 'airship' ? 'newshi.shp.000000.png' : rock ? 'newshd.shp.000000.png' : newSheet ? 'newsh2.shp.000000.png' : 'newsh$.shp.000000.png');
       const region = atlasRegion(clip.start);
       assert.ok(frame.width + 4 <= region.width && frame.height + 2 <= region.height);
     }

@@ -19,6 +19,8 @@ a mění štíty na samostatnou zásobu pro každý život. [Fáze 16](faze16.md
 přidává výzbroj s jedním až pěti děly vedle sebe. [Fáze 17](faze17.md)
 používá sprite kanóny z `newshs` a mění dočasný bonus na jedno dělo navíc.
 [Fáze 18](faze18.md) skládá fialové Bastiony ze dvou samostatně zničitelných dílů.
+[Fáze 19](faze19.md) přidává další dva typy pozemních kanónů s dvojitou
+palbou a rozstřelitelné padající kameny z `newshd` bez bodové odměny.
 
 ## Spuštění
 

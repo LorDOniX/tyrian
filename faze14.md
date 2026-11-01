@@ -19,6 +19,9 @@ Při neúspěchu se skóre i peníze stále vracejí na checkpoint začátku mis
 
 ## Čtvrtý level
 
+> [Fáze 19](faze19.md) později přidává k původním vlnám 15 padajících kamenů
+> a rozšiřuje počet pozemních věží z pěti na devět.
+
 **Slévárna stínů** má 64 sekund časovaných vln, **39 nepřátel** a **pět
 pozemních věží**. První část představuje hlídky, druhá kombinuje rotující
 salvy a mířené útoky, poslední část obrannou linii obrněnců a průletových lodí.

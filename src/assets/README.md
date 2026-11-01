@@ -1,6 +1,6 @@
 # Tyrian FX atlas
 
-`tyrian-fx.png` je připravený RGBA atlas 512 × 512 px (110 snímků).
+`tyrian-fx.png` je připravený RGBA atlas 512 × 512 px (118 snímků).
 Vznikl z těchto souborů přidaných do repozitáře:
 
 - `Remastered Tyrian Graphics/newsh6.shp.000000.png`
@@ -14,6 +14,7 @@ Vznikl z těchto souborů přidaných do repozitáře:
 - `Remastered Tyrian Graphics/newsh2.shp.000000.png`
 - `Remastered Tyrian Graphics/newsh4.shp.000000.png`
 - `Remastered Tyrian Graphics/newshs.shp.000000.png`
+- `Remastered Tyrian Graphics/newshd.shp.000000.png`
 
 Výřezy a animační klipy: `src/sprite-clips.ts`.
 Odstraněná barva pozadí: RGB (191, 220, 191), bez odstraňování jiných barev.
@@ -57,3 +58,9 @@ Při přípravě výstřelu se použije rozsvícená varianta hlavy. Více ve `f
 Dva snímky `bastionShip` z `newsh2` jsou dvě části téhož trupu, nikoli
 varianty poškození. Ve hře se vykreslují současně za sebou a každý díl
 má vlastní zdraví; detaily jsou ve `faze18.md`.
+
+List `newshd` přidává dva typy dvojitých kanónů (`twinSteelCannon`,
+`twinGoldCannon`, po třech snímcích) a dva padající kameny (`smallRock`,
+`largeRock`, po jednom snímku). Kanóny používají spodní volné buňky
+od (320, 480), kameny buňky (480, 192) a (416, 224). Rozměr atlasu
+zůstává 512 × 512 px. Výřezy a pravidla popisuje `faze19.md`.

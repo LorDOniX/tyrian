@@ -1,3 +1,4 @@
+import { GROUND_WEAPONS } from './ground-weapons.ts';
 import { createDreadnoughtBossModel } from './dreadnought-boss-model.ts';
 import { maxShield } from './upgrades.ts';
 import { DEFAULT_PLAYER_SHIP, playerShipPose } from './player-ships.ts';
@@ -5,7 +6,7 @@ import { PICKUP_SCALE, playerVolley } from './bonuses.ts';
 import type { PlayerShipId } from './player-ships.ts';
 import { createFortressBossModel } from './fortress-boss-model.ts';
 import { createConvoyBossModel } from './convoy-boss-model.ts';
-import { ENEMY_TYPES, enemyCanCharge, enemySpritePose, enemyCircles, bastionMuzzleY } from './enemies.ts';
+import { ENEMY_TYPES, enemyCanCharge, enemySpritePose, enemyCircles, bastionMuzzleY, isRock } from './enemies.ts';
 import { createSpriteEffects } from './sprite-effects.ts';
 import { bossCircles } from './boss.ts';
 import { createBossModel } from './boss-model.ts';
@@ -192,7 +193,7 @@ export async function createScene(container: HTMLElement) {
         front.renderOrder = 6;
         model.add(front);
       }
-      if (enemy.kind !== 'scout') {
+      if (enemy.kind !== 'scout' && !isRock(enemy.kind)) {
         for (const [index, x] of (enemy.kind === 'airship' ? [-1.8, 1.8] : [0]).entries()) {
           const muzzle = new THREE.Mesh(coreGeometry, chargingMaterial);
           muzzle.name = index === 0 ? 'muzzle' : 'muzzle-right';
@@ -227,6 +228,7 @@ export async function createScene(container: HTMLElement) {
       }
       // Kapičky drží jeden snímek; plynulé otočení nenaruší změna směru kličkování.
       if (enemy.kind === 'weaver') icon.rotation.z = Math.PI + (enemy.age ?? 0) * 2.5;
+      if (isRock(enemy.kind)) icon.rotation.z = (enemy.age ?? 0) * (enemy.kind === 'rockSmall' ? 1.1 : -0.65);
       if (enemy.kind === 'rotor') icon.rotation.z = (enemy.age ?? 0) * 3;
       if (enemy.kind === 'wraith') icon.rotation.z = Math.sin((enemy.age ?? 0) * 2.4) * 0.12;
       for (const name of ['muzzle', 'muzzle-right']) {
@@ -239,7 +241,8 @@ export async function createScene(container: HTMLElement) {
         muzzle.scale.setScalar(1 + (1 - Math.max(0, enemy.shotLeft) / preparation) * 1.8);
       }
     });
-    sync(state.groundTargets, groundModels, () => {
+    sync(state.groundTargets, groundModels, target => {
+      const weapon = GROUND_WEAPONS[target.weapon ?? 'single'];
       const model = new THREE.Group();
       const base = sprites.create('groundCannonBase');
       sprites.animate(base, 'groundCannonBase', 0);
@@ -247,17 +250,20 @@ export async function createScene(container: HTMLElement) {
       base.renderOrder = 2;
       const pivot = new THREE.Group();
       pivot.name = 'pivot';
-      const head = sprites.create('groundCannon');
+      const head = sprites.create(weapon.clip);
       head.name = 'head';
       head.rotation.z = Math.PI;
       // Střed otočné části zdrojového spritu je šest pixelů nad středem buňky.
-      head.position.set(0, 0.375, -3.1);
+      head.position.set(0, weapon.anchorY, -3.1);
       head.renderOrder = 3;
-      const flash = new THREE.Mesh(coreGeometry, chargingMaterial);
-      flash.name = 'charge';
-      flash.position.set(0, 1.05, -3);
-      flash.renderOrder = 4;
-      pivot.add(head, flash);
+      pivot.add(head);
+      weapon.muzzles.forEach((offset, i) => {
+        const flash = new THREE.Mesh(coreGeometry, chargingMaterial);
+        flash.name = `charge-${i}`;
+        flash.position.set(offset, 1.05, -3);
+        flash.renderOrder = 4;
+        pivot.add(flash);
+      });
       model.add(base, pivot);
       return model;
     }, (model, target) => {
@@ -265,10 +271,14 @@ export async function createScene(container: HTMLElement) {
       model.visible = target.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
       const pivot = model.getObjectByName('pivot')!;
       pivot.rotation.z = Math.atan2(state.player.y - target.y, state.player.x - target.x) - Math.PI / 2;
-      sprites.animate(pivot.getObjectByName('head')!, 'groundCannon', target.shotLeft <= 0.4 ? 1 : 0);
-      const charge = pivot.getObjectByName('charge')!;
-      charge.visible = target.shotLeft <= 0.4 && target.y + TURRET_EXTENT <= 12 && target.y - TURRET_EXTENT >= -12;
-      charge.scale.setScalar(1 + (0.4 - Math.max(0, target.shotLeft)) * 4);
+      const weapon = GROUND_WEAPONS[target.weapon ?? 'single'];
+      const phase = target.shotLeft <= 0.15 ? 2 : target.shotLeft <= 0.4 ? 1 : 0;
+      sprites.animate(pivot.getObjectByName('head')!, weapon.clip, target.weapon && target.weapon !== 'single' ? phase : Math.min(1, phase));
+      weapon.muzzles.forEach((_, i) => {
+        const charge = pivot.getObjectByName(`charge-${i}`)!;
+        charge.visible = target.shotLeft <= 0.4 && target.y + TURRET_EXTENT <= 12 && target.y - TURRET_EXTENT >= -12;
+        charge.scale.setScalar(1 + (0.4 - Math.max(0, target.shotLeft)) * 4);
+      });
     });
     sync(state.wrecks, wreckModels, () => {
       const model = new THREE.Mesh(turretBaseGeometry, wreckMaterial);
