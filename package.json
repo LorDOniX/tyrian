@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "node --test tests/*.test.ts",
     "assets:prepare": "node scripts/prepare-sprites.ts",
-    "dev:level2": "vite --mode level2"
+    "dev:level2": "vite --mode level2",
+    "dev:boss2": "vite --mode boss2"
   },
   "dependencies": {
     "three": "^0.187.0"

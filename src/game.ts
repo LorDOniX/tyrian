@@ -88,7 +88,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     state.stageTimer -= dt;
     if (state.stageTimer <= 0) {
       state.missionStage = 'boss';
-      state.boss = createBoss(state.nextId++);
+      state.boss = createBoss(state.nextId++, level.bossVariant);
     }
   }
   const previousDistance = state.scrollDistance;
@@ -130,7 +130,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
     state.stageTimer = Math.max(0, previous - dt);
     if (Math.floor(previous / 0.15) !== Math.floor(state.stageTimer / 0.15) && state.boss) {
       const offset = Math.floor(previous / 0.15) % 3 - 1;
-      state.effects.push({ id: state.nextId++, x: state.boss.x + offset * 1.5, y: state.boss.y + offset * 0.5, age: 0, kind: 'explosion', scale: 1.2 });
+      state.effects.push({ id: state.nextId++, x: state.boss.x + offset * (state.boss.variant === 'convoy' ? 3 : 1.5), y: state.boss.y + offset * 0.5, age: 0, kind: 'explosion', scale: 1.2 });
     }
     if (state.stageTimer === 0) state.status = 'victory';
     return;
@@ -205,11 +205,15 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       enemy.mode = 'destroyed';
       state.missionStage = 'bossDestroyed';
       state.pickups = [];
-      state.stageTimer = 1;
+      state.stageTimer = enemy.variant === 'convoy' ? 1.5 : 1;
+      if (enemy.variant === 'convoy') {
+        effect('explosion', enemy.x - 3, enemy.y - 0.7, 1.3);
+        effect('explosion', enemy.x + 3, enemy.y - 0.7, 1.3);
+      }
       state.bullets = state.bullets.filter(bullet => bullet.owner === 'player');
     }
     if (enemy.kind === 'turret') state.wrecks.push({ id: enemy.id, x: enemy.x, levelY: enemy.levelY, y: enemy.y });
-    state.score += enemy.kind === 'boss' ? 2000 : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
+    state.score += enemy.kind === 'boss' ? (enemy.variant === 'convoy' ? 5000 : 2000) : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
     explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
       enemy.previousY + (enemy.y - enemy.previousY) * time);
     if (enemy.kind === 'airship') {

@@ -41,6 +41,7 @@ const levelTitle = required('#level-title');
 const debugTools = required('#debug-tools');
 const debugLevel2 = required<HTMLButtonElement>('#debug-level2');
 const debugAirships = required('#debug-airships');
+const debugBoss2 = required<HTMLButtonElement>('#debug-boss2');
 debugTools.hidden = !import.meta.env.DEV;
 function enterLevel2() {
   Object.assign(state, createGame(false, 1));
@@ -48,6 +49,12 @@ function enterLevel2() {
   continueGame();
 }
 debugLevel2.addEventListener('click', enterLevel2);
+function enterBoss2() {
+  Object.assign(state, createGame(true, 1));
+  debugBoss2.blur();
+  continueGame();
+}
+debugBoss2.addEventListener('click', enterBoss2);
 const bonusMessages = { spread: 'Trojstřela na 12 sekund', repair: 'Oprava · +1 život', repairScore: 'Plné životy · +150 bodů' };
 const keys = new Set<string>();
 const controls = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
@@ -109,7 +116,9 @@ function tick(time: number) {
   }, dt);
   if (import.meta.env.DEV) {
     const airships = state.enemies.filter(enemy => enemy.kind === 'airship');
-    debugAirships.textContent = airships.length ? airships.map(enemy => `Vzducholoď #${enemy.id}: ${enemy.hp}/16 · ${enemy.hp < 16 ? 'poškozená' : 'celá'}`).join(' | ') : '';
+    debugAirships.textContent = state.boss?.variant === 'convoy'
+      ? `Admirál: ${state.boss.hp}/${state.boss.maxHp} · ${state.boss.attack} · ${state.boss.mode}`
+      : airships.map(enemy => `Vzducholoď #${enemy.id}: ${enemy.hp}/16 · ${enemy.hp < 16 ? 'poškozená' : 'celá'}`).join(' | ');
   }
   score.textContent = String(state.score).padStart(6, '0');
   lives.textContent = String(state.lives);
@@ -128,7 +137,7 @@ function tick(time: number) {
   levelTitle.textContent = `Level ${state.levelIndex + 1} · ${getLevel(state.levelIndex).name}`;
   progress.value = Math.min(1, state.time / getLevel(state.levelIndex).duration);
   section.textContent = state.status === 'victory' ? `Hotovo · Level ${state.levelIndex + 1}`
-    : state.missionStage === 'warning' ? 'Varování · Blíží se velitel'
+    : state.missionStage === 'warning' ? (state.levelIndex === 1 ? 'Varování · Admirál konvoje' : 'Varování · Blíží se velitel')
     : state.missionStage === 'bossDestroyed' ? 'Cíl zničen'
     : state.missionStage === 'boss' ? (state.boss?.mode === 'entering' ? 'Boss · Přílet pod štítem'
       : state.boss?.mode === 'transitioning' ? 'Boss · Fáze 2' : `Boss · Fáze ${state.boss?.phase ?? 1}`)
@@ -136,7 +145,7 @@ function tick(time: number) {
   bossHud.hidden = !state.boss || state.boss.mode === 'entering' || state.boss.mode === 'destroyed';
   bossHealth.max = state.boss?.maxHp ?? 60;
   bossHealth.value = Math.max(0, state.boss?.hp ?? 0);
-  bossLabel.textContent = `Velitel · ${Math.max(0, state.boss?.hp ?? 0)} / ${state.boss?.maxHp ?? 60}`;
+  bossLabel.textContent = `${state.boss?.variant === 'convoy' ? 'Admirál konvoje' : 'Velitel'} · ${Math.max(0, state.boss?.hp ?? 0)} / ${state.boss?.maxHp ?? 60}`;
   view.render(state, debugToggle.checked, terrainToggle.checked);
   frame = requestAnimationFrame(tick);
 }
@@ -153,6 +162,7 @@ if (import.meta.hot) {
     document.removeEventListener('visibilitychange', visibility);
     action.removeEventListener('click', continueGame);
     debugLevel2.removeEventListener('click', enterLevel2);
+    debugBoss2.removeEventListener('click', enterBoss2);
     view.dispose();
   });
 }

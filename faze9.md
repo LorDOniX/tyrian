@@ -2,8 +2,9 @@
 
 Přibyl level 2 „Vzdušný konvoj“ s vlastním seznamem vln a novým nepřítelem.
 Po dokončení prvního levelu a jeho původního bosse pokračuje tlačítko
-„Další level“ nebo Enter do konvoje. Druhý level uzavírá kampaň po
-vyřešení všech jeho nepřátel a střel; další boss se v něm nevytváří.
+„Další level“ nebo Enter do konvoje. Původní konec po vlnách rozšiřuje [fáze 10](faze10.md): po vyřešení
+nepřátel a jejich střel přichází Admirál konvoje z `newsht.shp.000000.png`.
+Kampaň končí až po jeho poražení.
 
 ## 1. Jak druhý level funguje
 

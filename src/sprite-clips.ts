@@ -1,5 +1,5 @@
 // Výřezy zdrojů jsou v pixelech od levého horního rohu, indexované od nuly.
-// Malé snímky mají buňky 32 × 32, vzducholodě vlastní oblasti 128 × 160.
+// Malé snímky mají buňky 32 × 32, velké trupy vlastní obdélníkové oblasti.
 export const ATLAS = { width: 512, height: 512, cell: 32, columns: 16 } as const;
 const fx = 'newsh6.shp.000000.png';
 const weapons = 'newsh(.shp.000000.png';
@@ -11,6 +11,12 @@ const shipFrames = (y: number) => [0, 48, 96].map(x => ({
 }));
 
 export const SPRITE_CLIPS = {
+  convoyBoss: { start: 49, fps: 1, loop: true, size: 3.2, width: 2.5, referenceCell: 32,
+    frames: [0, 84].map(y => ({ source: 'newsht.shp.000000.png', x: 0, y, width: 144, height: 56 })) },
+  convoyLeftGun: { start: 51, fps: 1, loop: true, size: 1.6, width: 1, referenceCell: 32,
+    frames: [{ source: 'newsht.shp.000000.png', x: 24, y: 56, width: 24, height: 28 }] },
+  convoyRightGun: { start: 52, fps: 1, loop: true, size: 1.6, width: 1, referenceCell: 32,
+    frames: [{ source: 'newsht.shp.000000.png', x: 120, y: 56, width: 24, height: 28 }] },
   airship: { start: 47, fps: 1, loop: true, size: 8, width: 0.8, referenceCell: 32,
     frames: [0, 96].map(x => ({ source: 'newshi.shp.000000.png', x, y: 0, width: 96, height: 140 })) },
   scoutShip: { start: 32, fps: 1, loop: true, size: 2, width: 1, referenceCell: 32, frames: shipFrames(0) },
@@ -49,8 +55,9 @@ export function spriteFrame(name: SpriteClip, age: number): number | null {
   return clip.start + frame % clip.frames.length;
 }
 
-// Dva velké výřezy mají vlastní obdélníky pod řadami malých snímků.
+// Velké trupy mají vlastní obdélníky pod řadami malých snímků.
 export function atlasRegion(index: number) {
+  if (index === 49 || index === 50) return { x: 256, y: 128 + (index - 49) * 64, width: 160, height: 64 };
   if (index === 47 || index === 48) return { x: (index - 47) * 128, y: 128, width: 128, height: 160 };
   return { x: index % ATLAS.columns * ATLAS.cell, y: Math.floor(index / ATLAS.columns) * ATLAS.cell,
     width: ATLAS.cell, height: ATLAS.cell };

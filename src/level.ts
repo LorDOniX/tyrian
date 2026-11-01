@@ -1,3 +1,4 @@
+import type { BossVariant } from './boss.ts';
 import type { PickupKind } from './bonuses.ts';
 import type { EnemyKind } from './enemies.ts';
 export type { EnemyKind } from './enemies.ts';
@@ -64,7 +65,7 @@ export const GROUND_TARGETS: readonly Readonly<{ x: number; levelY: number }>[] 
 export type LevelIndex = 0 | 1;
 export type LevelDefinition = Readonly<{
   name: string; duration: number; events: readonly SpawnEvent[];
-  groundTargets: readonly Readonly<{ x: number; levelY: number }>[]; boss: boolean;
+  groundTargets: readonly Readonly<{ x: number; levelY: number }>[]; boss: boolean; bossVariant?: BossVariant;
 }>;
 const convoy: SpawnEvent[] = [];
 const escort = (at: number, kind: EnemyKind, xs: number[], drop?: PickupKind) => {
@@ -83,9 +84,9 @@ escort(34, 'airship', [-3.5, 3.5]);
 escort(38, 'pulsar', [0]);
 escort(41, 'interceptor', [-5, 5]);
 export const LEVELS: readonly LevelDefinition[] = Object.freeze([
-  Object.freeze({ name: 'Základna', duration: LEVEL_DURATION, events: LEVEL_EVENTS, groundTargets: GROUND_TARGETS, boss: true }),
+  Object.freeze({ name: 'Základna', duration: LEVEL_DURATION, events: LEVEL_EVENTS, groundTargets: GROUND_TARGETS, boss: true, bossVariant: 'commander' }),
   Object.freeze({ name: 'Vzdušný konvoj', duration: 48,
     events: Object.freeze(convoy.sort((a, b) => a.at - b.at).map(event => Object.freeze(event))),
-    groundTargets: Object.freeze([]), boss: false }),
+    groundTargets: Object.freeze([]), boss: true, bossVariant: 'convoy' }),
 ]);
 export function getLevel(index: LevelIndex): LevelDefinition { return LEVELS[index]!; }

@@ -23,7 +23,8 @@ test('level two is separate data with four airships and a reachable first encoun
   assert.equal(getLevel(0).events, LEVEL_EVENTS);
   assert.equal(level.events.filter(event => event.kind === 'airship').length, 4);
   assert.equal(level.events[0]!.kind, 'airship');
-  assert.equal(level.boss, false);
+  assert.equal(level.boss, true);
+  assert.equal(level.bossVariant, 'convoy');
   assert.ok(level.events.every((event, i) => event.at < level.duration && (i === 0 || event.at >= level.events[i - 1]!.at)));
   const state = createGame(false, 1);
   for (let i = 0; i < 21; i++) updateGame(state, idle, 0.05);
@@ -137,13 +138,14 @@ test('level-two pause freezes hull state and complete convoy reaches final victo
   assert.deepEqual(state, snapshot);
   const run = createGame(false, 1);
   run.invulnerabilityLeft = 200;
-  for (let i = 0; i < 1800 && run.status === 'playing'; i++) {
+  for (let i = 0; i < 3200 && run.status === 'playing'; i++) {
     const target = run.enemies.find(enemy => enemy.kind === 'airship');
-    const dx = (target?.x ?? 0) - run.player.x;
+    const dx = (run.boss?.x ?? target?.x ?? 0) - run.player.x;
     updateGame(run, { x: Math.abs(dx) < 0.15 ? 0 : Math.sign(dx), y: 0, fire: true }, 0.05);
   }
   assert.equal(run.status, 'victory');
-  assert.equal(run.boss, null);
+  assert.equal(run.boss!.variant, 'convoy');
+  assert.equal(run.boss!.hp, 0);
   assert.equal(run.nextEvent, getLevel(1).events.length);
   assert.equal(run.enemies.length, 0);
 });

@@ -9,7 +9,8 @@ se dvěma fázemi, mířenou salvou a vějířem střel. [Fáze 6](faze6.md) pou
 sprite exploze, zásahy a projektily z přidaných Tyrian assetů. [Fáze 7](faze7.md)
 přidává sbíratelnou opravu a dočasnou trojstřelu. [Fáze 8](faze8.md) mění běžné
 lodě na Tyrian sprity a rozšiřuje flotilu na 50 lodí pěti typů. [Fáze 9](faze9.md)
-přidává druhý level se vzducholoděmi, poškozenými variantami trupu a debug startem. Zachovává 3 životy, skóre, pauzu a restart.
+přidává druhý level se vzducholoděmi, poškozenými variantami trupu a debug startem.
+[Fáze 10](faze10.md) ho zakončuje sprite bossem z `newsht.shp.000000.png`. Zachovává 3 životy, skóre, pauzu a restart.
 
 ## Spuštění
 
@@ -25,7 +26,7 @@ zaškrtávátkem. Přepínač Terén skrývá pouze dekoraci, nikoli věže a st
 Pro testy používej Node.js 22.18+ (nebo novější podporovanou řadu).
 
 Pro ladění závěrečného souboje: `npm run dev -- --mode boss`.
-Přímo do druhého levelu: `npm run dev:level2`. Ve vývoji lze použít i tlačítko
+Přímo do druhého levelu: `npm run dev:level2`. K jeho bossovi: `npm run dev:boss2`. Ve vývoji lze použít i tlačítko
 „Debug: start levelu 2“. Po vítězství v prvním levelu Enter přejde do druhého;
 po prohře restartuje aktuální level. Produkční hra vždy začíná levelem 1.
 
@@ -33,6 +34,7 @@ po prohře restartuje aktuální level. Produkční hra vždy začíná levelem 
 
 - `npm run dev` – vývojový server.
 - `npm run dev:level2` – vývojový start přímo ve druhém levelu.
+- `npm run dev:boss2` – vývojový start přímo před bossem druhého levelu.
 - `npm run assets:prepare` – volitelné obnovení sprite atlasu ze zdrojů (vyžaduje FFmpeg).
 - `npm test` – testy kolizí a herních pravidel.
 - `npm run typecheck` – kontrola typů.
@@ -43,6 +45,8 @@ po prohře restartuje aktuální level. Produkční hra vždy začíná levelem 
 
 - `src/main.ts` – vstup aplikace a úklid při HMR.
 - `src/level.ts` – časované formace a části úrovně.
+- `src/convoy-boss.ts` – pravidla a útoky admirála konvoje.
+- `src/convoy-boss-model.ts` – sprite model, rozsvícené hlavně a štít.
 - `src/boss.ts` – pravidla souboje a útoků.
 - `src/boss-model.ts` – 3D model a vizuální signalizace.
 - `src/start-mode.ts` – vývojové vstupy k bossovi a do druhého levelu.

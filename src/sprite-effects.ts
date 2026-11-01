@@ -44,3 +44,5 @@ export async function createSpriteEffects() {
   }
   return { create, animate, dispose };
 }
+
+export type SpriteEffects = Awaited<ReturnType<typeof createSpriteEffects>>;
