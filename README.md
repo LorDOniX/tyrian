@@ -20,7 +20,12 @@ npm run dev
 ```
 
 Šipky / WASD: pohyb. Mezerník: střelba. Esc: pauza. Enter: pokračování / restart.
-Kamera je pevná. Při opuštění okna se hra pozastaví. Kolizní kruhy lze zapnout
+Po zničení bosse každého levelu loď automaticky zrychlí nahoru a odletí
+za horní okraj. Až poté se zobrazí výsledek mise. Ve vývoji lze animaci
+zkusit tlačítkem „Debug: odlet“. Tlačítko „Loď: …“ otevře výběr sedmi vzhledů z `tyrian.shp.007D3C.png`
+s náhledy. Výchozí je první stříbrná loď. Volba platí do obnovení stránky,
+včetně restartů a přechodů mezi levely; herní vlastnosti zůstávají stejné.
+Při výběru je hra pozastavená. Kamera je pevná. Při opuštění okna se hra pozastaví. Kolizní kruhy lze zapnout
 zaškrtávátkem. Přepínač Terén skrývá pouze dekoraci, nikoli věže a střely. Ovládání je zatím pouze klávesnicí.
 
 Pro testy používej Node.js 22.18+ (nebo novější podporovanou řadu).
@@ -61,6 +66,7 @@ Třetí level lze spustit přímo příkazem `npm run dev:level3`, jeho bosse `n
 - `src/collision.ts` – kolizní výpočty ve 2D.
 - `src/terrain.ts` – opakované segmenty a stylizovaný stín.
 - `src/terrain-layout.ts` – výpočet poloh segmentů.
+- `src/player-ships.ts` – vzhledy hráče a výběr snímku náklonu.
 - `src/sprite-clips.ts` – výřezy a časování sprite animací.
 - `src/sprite-effects.ts` – sdílená textura a sprite modely.
 - `src/assets/tyrian-fx.png` – připravený průhledný atlas.

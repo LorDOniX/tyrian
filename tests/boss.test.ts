@@ -116,7 +116,7 @@ test('boss death clears simultaneous hazards before player damage and cancels pe
   assert.equal(state.lives, 1);
   assert.equal(state.score, 2000);
   assert.equal(state.bullets.filter(shot => shot.owner === 'enemy').length, 0);
-  for (let i = 0; i < 21; i++) updateGame(state, idle, 0.05);
+  for (let i = 0; i < 66; i++) updateGame(state, idle, 0.05);
   assert.equal(state.status, 'victory');
   assert.equal(state.score, 2000);
   pauseGame(state);

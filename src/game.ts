@@ -26,7 +26,8 @@ export type Input = { x: number; y: number; fire: boolean };
 export type Effect = { id: number; x: number; y: number; age: number; kind: EffectKind; scale: number };
 export type GameState = BonusState & {
   levelIndex: LevelIndex; checkpointScore: number;
-  missionStage: 'waves' | 'warning' | 'boss' | 'bossDestroyed';
+  missionStage: 'waves' | 'warning' | 'boss' | 'bossDestroyed' | 'departing';
+  departure: { startY: number; elapsed: number } | null;
   stageTimer: number; boss: Boss | null;
   status: 'playing' | 'paused' | 'gameOver' | 'victory';
   score: number; lives: number; time: number; scrollDistance: number; nextGround: number;
@@ -39,7 +40,7 @@ export function createGame(startAtBoss = false, levelIndex: LevelIndex = 0): Gam
   const level = getLevel(levelIndex);
   startAtBoss = startAtBoss && level.boss;
   return {
-    levelIndex, checkpointScore: 0,
+    levelIndex, checkpointScore: 0, departure: null,
     missionStage: startAtBoss ? 'warning' : 'waves', stageTimer: startAtBoss ? 1.5 : 0, boss: null,
     status: 'playing', score: 0, lives: MAX_LIVES,
     pickups: [], weaponLeft: 0, bonusNotice: null, noticeLeft: 0, time: startAtBoss ? level.duration : 0,
@@ -58,6 +59,18 @@ export function advanceLevel(state: GameState): void {
   const checkpointScore = state.score;
   Object.assign(state, createGame(false, (state.levelIndex + 1) as LevelIndex), { score: checkpointScore, checkpointScore });
 }
+export const DEPARTURE_DURATION = 2.2;
+export const DEPARTURE_END_Y = WORLD_HEIGHT / 2 + 6;
+
+export function beginLevelDeparture(state: GameState): void {
+  state.missionStage = 'departing';
+  state.departure = { startY: state.player.y, elapsed: 0 };
+  state.bullets = [];
+  state.pickups = [];
+  state.invulnerabilityLeft = 0;
+  state.stageTimer = 0;
+}
+
 export function pauseGame(state: GameState): void { if (state.status === 'playing') state.status = 'paused'; }
 export function resumeGame(state: GameState): void { if (state.status === 'paused') state.status = 'playing'; }
 
@@ -84,6 +97,18 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
   if (state.lives <= 0) { state.status = 'gameOver'; return; }
   const level = getLevel(state.levelIndex);
   state.time += dt;
+  // Závěrečný průlet má vlastní pohyb mimo běžné hranice a kolize.
+  if (state.missionStage === 'departing' && state.departure) {
+    const departure = state.departure;
+    remember(state.player);
+    departure.elapsed = Math.min(DEPARTURE_DURATION, departure.elapsed + dt);
+    const progress = departure.elapsed / DEPARTURE_DURATION;
+    state.player.y = departure.startY + (DEPARTURE_END_Y - departure.startY) * progress * progress;
+    state.tilt *= Math.exp(-10 * dt);
+    state.scrollDistance += SCROLL_SPEED * dt;
+    if (departure.elapsed >= DEPARTURE_DURATION) state.status = 'victory';
+    return;
+  }
   if (state.missionStage === 'warning') {
     state.stageTimer -= dt;
     if (state.stageTimer <= 0) {
@@ -132,7 +157,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       const offset = Math.floor(previous / 0.15) % 3 - 1;
       state.effects.push({ id: state.nextId++, x: state.boss.x + offset * (state.boss.variant !== 'commander' ? 3 : 1.5), y: state.boss.y + offset * 0.5, age: 0, kind: 'explosion', scale: 1.2 });
     }
-    if (state.stageTimer === 0) state.status = 'victory';
+    if (state.stageTimer === 0) beginLevelDeparture(state);
     return;
   }
   for (const pickup of updateBonuses(state, dt)) {
@@ -281,8 +306,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       state.missionStage = 'warning';
       state.stageTimer = 1.5;
     } else {
-      state.status = 'victory';
-      state.pickups = [];
+      beginLevelDeparture(state);
     }
   }
 }

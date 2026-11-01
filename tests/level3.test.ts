@@ -101,7 +101,7 @@ test('fortress wing hit kills once, cancels salvo and clears lethal hazard befor
   updateGame(state, idle, 0.05);
   assert.deepEqual(state, frozen);
   state.status = 'playing';
-  for (let i = 0; i < 31; i++) updateGame(state, idle, 0.05);
+  for (let i = 0; i < 76; i++) updateGame(state, idle, 0.05);
   assert.equal(state.status, 'victory');
   assert.equal(state.score, 7500);
 });

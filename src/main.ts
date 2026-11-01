@@ -1,9 +1,13 @@
+import atlasUrl from './assets/tyrian-fx.png?url';
+import { ATLAS, atlasRegion } from './sprite-clips.ts';
+import { PLAYER_SHIPS, PLAYER_SHIP_CLIPS, DEFAULT_PLAYER_SHIP, playerShipPose } from './player-ships.ts';
+import type { PlayerShipId } from './player-ships.ts';
 import { SPREAD_DURATION } from './bonuses.ts';
 import { startAtBoss, startLevel } from './start-mode.ts';
 import './style.css';
 import { getLevel, levelPart, hasNextLevel } from './level.ts';
 import { createScene } from './scene';
-import { createGame, advanceLevel, pauseGame, restartGame, resumeGame, updateGame } from './game.ts';
+import { createGame, beginLevelDeparture, advanceLevel, pauseGame, restartGame, resumeGame, updateGame } from './game.ts';
 
 function required<T extends HTMLElement>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -36,12 +40,18 @@ const bonusNotice = required('#bonus-notice');
 const bossHud = required('#boss-hud');
 const bossHealth = required<HTMLProgressElement>('#boss-health');
 const bossLabel = required('#boss-label');
+let selectedShip: PlayerShipId = DEFAULT_PLAYER_SHIP;
+const shipChoice = required<HTMLButtonElement>('#ship-choice');
+const shipPicker = required<HTMLDialogElement>('#ship-picker');
+const shipOptions = required('#ship-options');
+const shipPickerClose = required<HTMLButtonElement>('#ship-picker-close');
 const state = createGame(startAtBoss(import.meta.env.DEV, import.meta.env.MODE), startLevel(import.meta.env.DEV, import.meta.env.MODE));
 const levelTitle = required('#level-title');
 const debugTools = required('#debug-tools');
 const debugLevel2 = required<HTMLButtonElement>('#debug-level2');
 const debugAirships = required('#debug-airships');
 const debugLevel3 = required<HTMLButtonElement>('#debug-level3');
+const debugDeparture = required<HTMLButtonElement>('#debug-departure');
 const debugBoss3 = required<HTMLButtonElement>('#debug-boss3');
 const debugBoss2 = required<HTMLButtonElement>('#debug-boss2');
 debugTools.hidden = !import.meta.env.DEV;
@@ -61,6 +71,13 @@ function enterLevel3() { Object.assign(state, createGame(false, 2)); debugLevel3
 function enterBoss3() { Object.assign(state, createGame(true, 2)); debugBoss3.blur(); continueGame(); }
 debugLevel3.addEventListener('click', enterLevel3);
 debugBoss3.addEventListener('click', enterBoss3);
+function previewDeparture() {
+  Object.assign(state, createGame(false, state.levelIndex));
+  beginLevelDeparture(state);
+  debugDeparture.blur();
+  continueGame();
+}
+debugDeparture.addEventListener('click', previewDeparture);
 const bonusMessages = { spread: 'Trojstřela na 12 sekund', repair: 'Oprava · +1 život', repairScore: 'Plné životy · +150 bodů' };
 const keys = new Set<string>();
 const controls = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space']);
@@ -85,6 +102,7 @@ function pause() {
   previousTime = undefined;
 }
 function keydown(event: KeyboardEvent) {
+  if (shipPicker.open) return;
   const interactive = event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement;
   if (interactive && event.code === 'Space') return;
   if (event.target instanceof HTMLButtonElement && event.code === 'Enter') return;
@@ -110,6 +128,53 @@ window.addEventListener('keyup', keyup);
 window.addEventListener('blur', pause);
 document.addEventListener('visibilitychange', visibility);
 action.addEventListener('click', continueGame);
+
+let resumeAfterPicker = false;
+const shipButtons = PLAYER_SHIPS.map(skin => {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.ship = skin.id;
+  button.setAttribute('aria-pressed', String(skin.id === selectedShip));
+  const preview = document.createElement('span');
+  preview.className = 'ship-preview';
+  preview.setAttribute('aria-hidden', 'true');
+  const region = atlasRegion(PLAYER_SHIP_CLIPS[skin.id].start + playerShipPose(skin.id, 0));
+  const scale = region.width === 64 ? 1.5 : 2;
+  Object.assign(preview.style, { width: `${region.width * scale}px`, height: `${region.height * scale}px`,
+    backgroundImage: `url("${atlasUrl}")`, backgroundSize: `${ATLAS.width * scale}px ${ATLAS.height * scale}px`,
+    backgroundPosition: `-${region.x * scale}px -${region.y * scale}px` });
+  const label = document.createElement('span');
+  label.textContent = skin.name;
+  button.append(preview, label);
+  shipOptions.append(button);
+  return button;
+});
+function openShipPicker() {
+  resumeAfterPicker = state.status === 'playing';
+  pause();
+  shipPicker.showModal();
+  shipButtons.find(button => button.dataset.ship === selectedShip)?.focus();
+}
+function closeShipPicker() { shipPicker.close(); }
+function chooseShip(event: Event) {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-ship]');
+  const skin = PLAYER_SHIPS.find(skin => skin.id === button?.dataset.ship);
+  if (!skin) return;
+  selectedShip = skin.id;
+  shipChoice.textContent = `Loď: ${skin.name}`;
+  shipButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.ship === selectedShip)));
+  closeShipPicker();
+}
+function finishShipPicker() {
+  if (resumeAfterPicker && !document.hidden) resumeGame(state);
+  keys.clear();
+  previousTime = undefined;
+  shipChoice.blur();
+}
+shipChoice.addEventListener('click', openShipPicker);
+shipPickerClose.addEventListener('click', closeShipPicker);
+shipOptions.addEventListener('click', chooseShip);
+shipPicker.addEventListener('close', finishShipPicker);
 
 function tick(time: number) {
   if (disposed) return;
@@ -144,6 +209,7 @@ function tick(time: number) {
   progress.value = Math.min(1, state.time / getLevel(state.levelIndex).duration);
   section.textContent = state.status === 'victory' ? `Hotovo · Level ${state.levelIndex + 1}`
     : state.missionStage === 'warning' ? (state.levelIndex === 2 ? 'Varování · Ocelová pevnost' : state.levelIndex === 1 ? 'Varování · Admirál konvoje' : 'Varování · Blíží se velitel')
+    : state.missionStage === 'departing' ? 'Mise splněna · Odlet'
     : state.missionStage === 'bossDestroyed' ? 'Cíl zničen'
     : state.missionStage === 'boss' ? (state.boss?.mode === 'entering' ? 'Boss · Přílet pod štítem'
       : state.boss?.mode === 'transitioning' ? 'Boss · Fáze 2' : `Boss · Fáze ${state.boss?.phase ?? 1}`)
@@ -152,7 +218,7 @@ function tick(time: number) {
   bossHealth.max = state.boss?.maxHp ?? 60;
   bossHealth.value = Math.max(0, state.boss?.hp ?? 0);
   bossLabel.textContent = `${state.boss?.variant === 'fortress' ? 'Ocelová pevnost' : state.boss?.variant === 'convoy' ? 'Admirál konvoje' : 'Velitel'} · ${Math.max(0, state.boss?.hp ?? 0)} / ${state.boss?.maxHp ?? 60}`;
-  view.render(state, debugToggle.checked, terrainToggle.checked);
+  view.render(state, debugToggle.checked, terrainToggle.checked, selectedShip);
   frame = requestAnimationFrame(tick);
 }
 if (!document.hasFocus() || document.hidden) pause();
@@ -170,7 +236,14 @@ if (import.meta.hot) {
     debugLevel2.removeEventListener('click', enterLevel2);
     debugLevel3.removeEventListener('click', enterLevel3);
     debugBoss3.removeEventListener('click', enterBoss3);
+    debugDeparture.removeEventListener('click', previewDeparture);
     debugBoss2.removeEventListener('click', enterBoss2);
+    shipChoice.removeEventListener('click', openShipPicker);
+    shipPickerClose.removeEventListener('click', closeShipPicker);
+    shipOptions.removeEventListener('click', chooseShip);
+    shipPicker.removeEventListener('close', finishShipPicker);
+    shipOptions.replaceChildren();
+    if (shipPicker.open) shipPicker.close();
     view.dispose();
   });
 }

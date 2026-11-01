@@ -37,6 +37,7 @@ export function enemyCircles(enemy: Enemy): MovingCircle[] {
 export function enemyExtent(enemy: Enemy): number { return enemy.kind === 'airship' ? 3.5 : enemy.radius; }
 export function enemySpritePose(enemy: Enemy): number {
   if (enemy.kind === 'airship') return enemy.hp < ENEMY_TYPES.airship.hp ? 1 : 0;
+  if (enemy.kind === 'weaver') return 1;
   return Math.abs(enemy.x - enemy.previousX) < 0.002 ? 1 : enemy.x > enemy.previousX ? 2 : 0;
 }
 

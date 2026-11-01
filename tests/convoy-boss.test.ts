@@ -137,7 +137,7 @@ test('wing hit destroys admiral, cancels pending volley and clears lethal bullet
   assert.equal(state.bullets.filter(shot => shot.owner === 'enemy').length, 0);
   assert.ok(state.effects.filter(effect => effect.kind === 'explosion').length >= 3);
   assert.equal(state.status, 'playing');
-  for (let i = 0; i < 31; i++) updateGame(state, idle, 0.05);
+  for (let i = 0; i < 76; i++) updateGame(state, idle, 0.05);
   assert.equal(state.status, 'victory');
   assert.equal(state.score, 5000);
   restartGame(state);

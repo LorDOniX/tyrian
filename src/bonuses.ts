@@ -4,6 +4,7 @@ import type { MovingCircle } from './collision.ts';
 export const MAX_LIVES = 3;
 export const SPREAD_DURATION = 12;
 export const FULL_REPAIR_SCORE = 150;
+export const PICKUP_SCALE = 0.75;
 export type PickupKind = 'spread' | 'repair';
 export type Pickup = MovingCircle & { id: number; kind: PickupKind; speed: number };
 export type BonusState = {
@@ -12,7 +13,7 @@ export type BonusState = {
 };
 
 export function createPickup(id: number, kind: PickupKind, x: number, y: number): Pickup {
-  return { id, kind, x, y, previousX: x, previousY: y, radius: 0.55, speed: 2.5 };
+  return { id, kind, x, y, previousX: x, previousY: y, radius: 0.55 * PICKUP_SCALE, speed: 2.5 };
 }
 
 // Existující předměty se sbírají před střelbou a poškozením v tomto kroku.

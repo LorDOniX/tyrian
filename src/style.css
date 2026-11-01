@@ -55,3 +55,13 @@ progress { width: min(18rem, 70vw); height: 0.4rem; accent-color: #38bdf8; }
 .debug-tools button { padding: 0.45rem 0.7rem; font-size: 0.8rem; background: #334155; color: #e2e8f0; }
 .debug-tools { z-index: 2; }
 .debug-tools p { max-width: 20rem; margin: 0.35rem 0 0; font-size: 0.75rem; color: #d8b4fe; text-shadow: 0 1px 3px #000; }
+
+.ship-choice { position: fixed; z-index: 3; top: 16rem; left: 1rem; padding: 0.5rem 0.8rem; background: #334155; color: #e2e8f0; font-size: 0.85rem; }
+#ship-picker { color: #e2e8f0; background: #101a2c; border: 1px solid #475569; border-radius: 1rem; width: min(40rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 1.5rem; }
+#ship-picker::backdrop { background: #050b18bb; }
+#ship-picker h2 { margin: 0 0 0.5rem; }
+#ship-picker p { color: #a3b4cc; font-size: 0.85rem; }
+.ship-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 0.7rem; margin: 1rem 0; }
+.ship-options button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 7rem; padding: 0.5rem; background: #1e293b; color: #e2e8f0; border: 2px solid #334155; font-size: 0.85rem; }
+.ship-options button[aria-pressed="true"] { border-color: #38bdf8; background: #16405b; }
+.ship-preview { display: block; background-repeat: no-repeat; image-rendering: pixelated; margin-bottom: 0.4rem; }

@@ -1,11 +1,12 @@
 # Tyrian FX atlas
 
-`tyrian-fx.png` je připravený RGBA atlas 512 × 512 px (60 snímků).
+`tyrian-fx.png` je připravený RGBA atlas 512 × 512 px (101 snímků).
 Vznikl z těchto souborů přidaných do repozitáře:
 
 - `Remastered Tyrian Graphics/newsh6.shp.000000.png`
 - `Remastered Tyrian Graphics/newsh(.shp.000000.png`
 - `Remastered Tyrian Graphics/tyrian.shp.01673F.png`
+- `Remastered Tyrian Graphics/tyrian.shp.007D3C.png`
 - `Remastered Tyrian Graphics/newsh$.shp.000000.png`
 - `Remastered Tyrian Graphics/newshi.shp.000000.png`
 - `Remastered Tyrian Graphics/newsht.shp.000000.png`
@@ -25,3 +26,10 @@ využívají řádky y = 84 a 112 ze zdroje `newsh$`.
 Obnovení: `npm run assets:prepare` (vyžaduje FFmpeg a Node.js 22.18+).
 Běžný vývoj a build používají tento připravený soubor, FFmpeg nepotřebují.
 Podrobnosti: `faze6.md`, `faze7.md`, `faze8.md`, `faze9.md` , `faze10.md` a `faze11.md` v kořeni projektu.
+
+Sedm vzhledů hráče je popsáno v `src/player-ships.ts`: šest trupů s náklony
+(včetně patnácti snímků vidlice) a široká delta s jedním snímkem. Celkem
+41 nových snímků používá spodní řady atlasu od y = 416; delta má buňku 64 × 32 px.
+První stříbrný trup je výchozí. Efekty, projektily a malé komponenty na zdrojovém
+listu nejsou samostatné lodě. Původní 3D trup hráče nahrazují sprite modely,
+3D terén a ortografická kamera zůstávají.

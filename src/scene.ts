@@ -1,3 +1,6 @@
+import { DEFAULT_PLAYER_SHIP, playerShipPose } from './player-ships.ts';
+import { PICKUP_SCALE } from './bonuses.ts';
+import type { PlayerShipId } from './player-ships.ts';
 import { createFortressBossModel } from './fortress-boss-model.ts';
 import { createConvoyBossModel } from './convoy-boss-model.ts';
 import { ENEMY_TYPES, enemyCanCharge, enemySpritePose, enemyCircles } from './enemies.ts';
@@ -36,24 +39,22 @@ export async function createScene(container: HTMLElement) {
   const fortressBossModel = createFortressBossModel(scene, sprites);
   const convoyBossModel = createConvoyBossModel(scene, sprites);
 
-  // Skutečné 3D objemy, sestavené do jedné lodi.
+  // Hráč používá stejné sdílené sprite geometrie jako ostatní lodě.
   const ship = new THREE.Group();
-  const hullMaterial = new THREE.MeshStandardMaterial({ color: '#38bdf8', metalness: 0.4, roughness: 0.35 });
-  const wingMaterial = new THREE.MeshStandardMaterial({ color: '#d8eaff', metalness: 0.5, roughness: 0.4 });
-  const hull = new THREE.Mesh(new THREE.ConeGeometry(0.48, 1.7, 4), hullMaterial);
+  const hull = sprites.create(DEFAULT_PLAYER_SHIP);
+  hull.renderOrder = 9;
   ship.add(hull);
-  const wings = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.48, 0.2), wingMaterial);
-  wings.position.y = -0.35;
-  ship.add(wings);
-  const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 8),
-    new THREE.MeshStandardMaterial({ color: '#082f49', emissive: '#0e7490', emissiveIntensity: 0.6 }));
-  cockpit.position.set(0, 0, 0.4);
-  ship.add(cockpit);
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7, 8),
     new THREE.MeshBasicMaterial({ color: '#fb923c' }));
   flame.rotation.z = Math.PI;
   flame.position.y = -1.05;
   ship.add(flame);
+  const boostCore = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.7, 8),
+    new THREE.MeshBasicMaterial({ color: '#e0faff' }));
+  boostCore.rotation.z = Math.PI;
+  boostCore.position.z = 0.05;
+  boostCore.visible = false;
+  ship.add(boostCore);
   ship.position.set(0, -7, 0);
   scene.add(ship);
 
@@ -125,7 +126,7 @@ export async function createScene(container: HTMLElement) {
 
   let lastTime = 0;
   let lastLevel = -1;
-  function render(state: GameState, debug: boolean, showTerrain: boolean) {
+  function render(state: GameState, debug: boolean, showTerrain: boolean, playerShip: PlayerShipId = DEFAULT_PLAYER_SHIP) {
     if (state.time < lastTime || state.levelIndex !== lastLevel) {
       for (const models of [bulletModels, enemyModels, groundModels, wreckModels, effectModels, pickupModels, debugModels]) {
         models.forEach(model => scene.remove(model));
@@ -135,10 +136,18 @@ export async function createScene(container: HTMLElement) {
     lastTime = state.time;
     lastLevel = state.levelIndex;
     ship.position.set(state.player.x, state.player.y, 0);
-    ship.rotation.y = state.tilt;
-    ship.visible = state.status !== 'gameOver' &&
+    sprites.animate(hull, playerShip, playerShipPose(playerShip, state.tilt));
+    const departing = state.missionStage === 'departing';
+    ship.visible = state.status !== 'gameOver' && !(departing && state.status === 'victory') &&
       (state.invulnerabilityLeft === 0 || Math.floor(state.time * 12) % 2 === 0);
-    flame.scale.y = 0.85 + Math.sin(state.time * 25) * 0.15;
+    const boost = departing ? Math.min(1, (state.departure?.elapsed ?? 0) / 0.5) : 0;
+    const exhaustLength = (0.85 + Math.sin(state.time * 25) * 0.15) * (1 + boost * 4);
+    flame.scale.set(1 + boost * 0.4, exhaustLength, 1 + boost * 0.4);
+    flame.position.y = -0.7 - 0.35 * exhaustLength;
+    flame.material.color.set(departing ? '#38bdf8' : '#fb923c');
+    boostCore.visible = departing;
+    boostCore.scale.y = exhaustLength * 0.75;
+    boostCore.position.y = -0.7 - 0.35 * boostCore.scale.y;
     const place = (model: THREE.Object3D, body: Body) => { model.position.set(body.x, body.y, 0); };
     sync(state.bullets, bulletModels, bullet => sprites.create(bullet.owner === 'player' ? 'playerShot' : 'enemyShot'),
       (model, bullet) => {
@@ -176,6 +185,8 @@ export async function createScene(container: HTMLElement) {
       const icon = model.getObjectByName('icon')!;
       const bank = enemySpritePose(enemy);
       sprites.animate(icon, ENEMY_TYPES[enemy.kind].clip, bank);
+      // Kapičky drží jeden snímek; plynulé otočení nenaruší změna směru kličkování.
+      if (enemy.kind === 'weaver') icon.rotation.z = Math.PI + (enemy.age ?? 0) * 2.5;
       // Záblesk zásahu skrývá pouze trup, nikoli signál chystaného útoku.
       icon.visible = enemy.hitLeft === 0 || Math.floor(state.time * 40) % 2 === 0;
       for (const name of ['muzzle', 'muzzle-right']) {
@@ -250,7 +261,7 @@ export async function createScene(container: HTMLElement) {
       const icon = model.getObjectByName('icon')!;
       sprites.animate(icon, pickup.kind === 'spread' ? 'spreadPickup' : 'repairPickup', state.time);
       model.position.set(pickup.x, pickup.y, 1.8);
-      model.scale.setScalar(1 + Math.sin(state.time * 6) * 0.06);
+      model.scale.setScalar(PICKUP_SCALE * (1 + Math.sin(state.time * 6) * 0.06));
     });
     sync(state.effects, effectModels, effect => sprites.create(effect.kind), (model, effect) => {
       sprites.animate(model, effect.kind, effect.age, effect.scale);
@@ -292,6 +303,7 @@ export async function createScene(container: HTMLElement) {
       models.forEach(model => scene.remove(model));
       models.clear();
     }
+    ship.remove(hull);
     sprites.dispose();
     // Evidence zahrnuje i sdílené prostředky modelů odstraněných během hry.
     const geometries = new Set<THREE.BufferGeometry>([

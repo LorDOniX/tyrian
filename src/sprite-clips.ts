@@ -1,3 +1,5 @@
+import { PLAYER_SHIP_CLIPS } from './player-ships.ts';
+
 // Výřezy zdrojů jsou v pixelech od levého horního rohu, indexované od nuly.
 // Malé snímky mají buňky 32 × 32, velké trupy vlastní obdélníkové oblasti.
 export const ATLAS = { width: 512, height: 512, cell: 32, columns: 16 } as const;
@@ -11,6 +13,7 @@ const shipFrames = (y: number) => [0, 48, 96].map(x => ({
 }));
 
 export const SPRITE_CLIPS = {
+  ...PLAYER_SHIP_CLIPS,
   weaverShip: { start: 53, fps: 1, loop: true, size: 2.3, width: 1, referenceCell: 32, frames: shipFrames(84) },
   strikerShip: { start: 56, fps: 1, loop: true, size: 2.6, width: 1, referenceCell: 32, frames: shipFrames(112) },
   fortressBoss: { start: 59, fps: 1, loop: true, size: 6.4, width: 208 / 144, referenceCell: 32,
@@ -61,6 +64,9 @@ export function spriteFrame(name: SpriteClip, age: number): number | null {
 
 // Velké trupy mají vlastní obdélníky pod řadami malých snímků.
 export function atlasRegion(index: number) {
+  // Nové malé lodě vyplňují tři volné spodní řady atlasu.
+  if (index >= 60 && index <= 100) return { x: (index - 60) % 16 * 32,
+    y: 416 + Math.floor((index - 60) / 16) * 32, width: index === 100 ? 64 : 32, height: 32 };
   if (index === 59) return { x: 256, y: 256, width: 208, height: 144 };
   if (index === 49 || index === 50) return { x: 256, y: 128 + (index - 49) * 64, width: 160, height: 64 };
   if (index === 47 || index === 48) return { x: (index - 47) * 128, y: 128, width: 128, height: 160 };
