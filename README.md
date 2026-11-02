@@ -1,3 +1,6 @@
+# Textury
+https://opengameart.org/content/remastered-tyrian-graphics-0
+
 # 3D shora
 
 Prototyp vertikální střílečky: 3D modely, ortografická kamera a pohyb ve 2D.
