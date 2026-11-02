@@ -1,8 +1,10 @@
 import type { MovingCircle } from './collision.ts';
 import type { PickupKind } from './bonuses.ts';
 
-export type EnemyKind = 'scout' | 'gunner' | 'interceptor' | 'spreader' | 'pulsar' | 'airship' | 'weaver' | 'striker' | 'wraith' | 'bastion' | 'rotor' | 'rockSmall' | 'rockLarge';
+export type EnemyKind = 'falcon' | 'emerald' | 'scout' | 'gunner' | 'interceptor' | 'spreader' | 'pulsar' | 'airship' | 'weaver' | 'striker' | 'wraith' | 'bastion' | 'rotor' | 'rockSmall' | 'rockLarge';
 export const ENEMY_TYPES = {
+  falcon: { hp: 4, radius: 0.8, speed: 5, score: 450, interval: 0.85, volleys: 3, stopY: 7, clip: 'falconShip' },
+  emerald: { hp: 6, radius: 0.85, speed: 3.8, score: 650, interval: 1.2, volleys: 3, stopY: 6.5, clip: 'emeraldShip' },
   rockSmall: { hp: 2, radius: 0.6, speed: 4.5, score: 0, interval: 0, volleys: 0, stopY: 0, clip: 'smallRock' },
   rockLarge: { hp: 4, radius: 0.9, speed: 3.5, score: 0, interval: 0, volleys: 0, stopY: 0, clip: 'largeRock' },
   wraith: { hp: 4, radius: 1.05, speed: 5.2, score: 450, interval: 0.9, volleys: 3, stopY: 7, clip: 'wraithShip' },
@@ -71,7 +73,7 @@ export function enemySpritePose(enemy: Enemy): number {
 
 export function enemyCanCharge(enemy: Enemy): boolean {
   if (isRock(enemy.kind)) return false;
-  return (enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith')
+  return (enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith' || enemy.kind === 'falcon')
     ? enemy.y + enemy.radius <= 12 && enemy.y - enemy.radius >= -10 && enemy.shots < ENEMY_TYPES[enemy.kind].volleys
     : enemy.phase === 'charging' && enemy.kind !== 'scout';
 }
@@ -85,10 +87,10 @@ export function updateEnemy(enemy: Enemy, dt: number): boolean {
   enemy.originX ??= enemy.x;
   enemy.age = (enemy.age ?? 0) + dt;
   const type = ENEMY_TYPES[enemy.kind];
-  if (isRock(enemy.kind) || enemy.kind === 'scout' || enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith' || enemy.phase === 'leaving') {
+  if (isRock(enemy.kind) || enemy.kind === 'scout' || enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith' || enemy.kind === 'falcon' || enemy.phase === 'leaving') {
     enemy.y -= enemy.speed * dt;
-    if (enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith') {
-      enemy.x = Math.max(-7.5, Math.min(7.5, enemy.originX + Math.sin(enemy.age * (enemy.kind === 'wraith' ? 2.4 : 1.8)) * (enemy.kind === 'wraith' ? 1.7 : 1.5)));
+    if (enemy.kind === 'interceptor' || enemy.kind === 'weaver' || enemy.kind === 'wraith' || enemy.kind === 'falcon') {
+      enemy.x = Math.max(-7.5, Math.min(7.5, enemy.originX + Math.sin(enemy.age * ((enemy.kind === 'wraith' || enemy.kind === 'falcon') ? 2.4 : 1.8)) * ((enemy.kind === 'wraith' || enemy.kind === 'falcon') ? 1.7 : 1.5)));
       if (enemyCanCharge(enemy)) {
         enemy.shotLeft -= dt;
         return enemy.shotLeft <= 0;
@@ -112,7 +114,12 @@ export function enemyVolley(enemy: Enemy, player: { x: number; y: number }): Ene
   const x = enemy.x;
   const y = enemy.y - 0.8;
   let shots: EnemyShot[];
-  if (enemy.kind === 'wraith') {
+  if (enemy.kind === 'emerald') {
+    shots = [-30, -10, 10, 30].map(angle => {
+      const radians = (angle + (enemy.shots % 2 ? 10 : 0)) * Math.PI / 180;
+      return { x, y, vx: Math.sin(radians) * 6.5, vy: -Math.cos(radians) * 6.5 };
+    });
+  } else if (enemy.kind === 'wraith' || enemy.kind === 'falcon') {
     const dx = player.x - x, dy = player.y - y;
     const aim = Math.hypot(dx, dy) > 0 ? Math.atan2(dx, -dy) : 0;
     shots = [-10, 0, 10].map(angle => ({ x, y, vx: Math.sin(aim + angle * Math.PI / 180) * 7,
@@ -158,6 +165,6 @@ export function enemyVolley(enemy: Enemy, player: { x: number; y: number }): Ene
   } else return [];
   enemy.shots++;
   enemy.shotLeft = type.interval;
-  if (enemy.kind !== 'interceptor' && enemy.kind !== 'weaver' && enemy.kind !== 'wraith' && enemy.shots >= type.volleys) enemy.phase = 'leaving';
+  if (enemy.kind !== 'interceptor' && enemy.kind !== 'weaver' && enemy.kind !== 'wraith' && enemy.kind !== 'falcon' && enemy.shots >= type.volleys) enemy.phase = 'leaving';
   return shots;
 }

@@ -1,3 +1,5 @@
+import { createClouds } from './clouds.ts';
+import { createSkyBossModel } from './sky-boss-model.ts';
 import { GROUND_WEAPONS } from './ground-weapons.ts';
 import { createDreadnoughtBossModel } from './dreadnought-boss-model.ts';
 import { maxShield } from './upgrades.ts';
@@ -38,6 +40,8 @@ export async function createScene(container: HTMLElement) {
   scene.add(light);
 
   const terrain = createTerrain(scene);
+  const clouds = createClouds(scene);
+  const skyBossModel = createSkyBossModel(scene, sprites);
   const bossModel = createBossModel(scene, sprites);
   const dreadnoughtBossModel = createDreadnoughtBossModel(scene, sprites);
   const fortressBossModel = createFortressBossModel(scene, sprites);
@@ -184,7 +188,7 @@ export async function createScene(container: HTMLElement) {
       const model = new THREE.Group();
       const icon = sprites.create(ENEMY_TYPES[enemy.kind].clip);
       icon.name = 'icon';
-      icon.rotation.z = ['airship', 'wraith', 'bastion', 'rotor'].includes(enemy.kind) ? 0 : Math.PI; // Starší malé lodě míří v předloze vzhůru, nové trupy a vzducholoď dolů.
+      icon.rotation.z = ['airship', 'wraith', 'bastion', 'rotor', 'falcon', 'emerald'].includes(enemy.kind) ? 0 : Math.PI; // Starší malé lodě míří v předloze vzhůru, nové trupy a vzducholoď dolů.
       icon.renderOrder = 6;
       model.add(icon);
       if (enemy.kind === 'bastion') {
@@ -335,6 +339,8 @@ export async function createScene(container: HTMLElement) {
     dreadnoughtBossModel.render(state.boss, state.time, state.stageTimer);
     fortressBossModel.render(state.boss, state.time, state.stageTimer);
     convoyBossModel.render(state.boss, state.time, state.stageTimer);
+    skyBossModel.render(state.boss, state.time, state.stageTimer);
+    clouds.render(state.scrollDistance, state.levelIndex === 4);
     terrain.render(state.scrollDistance, state.player.x, state.player.y, showTerrain, ship.visible, state.levelIndex);
     for (const { stars, positions, original, speed } of starLayers) {
       stars.visible = !showTerrain;
@@ -350,6 +356,8 @@ export async function createScene(container: HTMLElement) {
   function dispose() {
     observer.disconnect();
     terrain.dispose();
+    clouds.dispose();
+    skyBossModel.dispose();
     bossModel.dispose();
     dreadnoughtBossModel.dispose();
     fortressBossModel.dispose();

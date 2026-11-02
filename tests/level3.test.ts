@@ -25,7 +25,7 @@ test('campaign advances from second victory with checkpoint, continues from thir
   assert.equal(state.checkpointScore, 12345);
   assert.equal(hasNextLevel(1), true);
   assert.equal(hasNextLevel(2), true);
-  assert.equal(hasNextLevel(3), false);
+  assert.equal(hasNextLevel(3), true);
 });
 test('third level has sorted finite waves, new ships, drops and ground targets', () => {
   const level = getLevel(2);

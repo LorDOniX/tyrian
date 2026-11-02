@@ -58,9 +58,9 @@ export function createTerrain(scene: THREE.Scene) {
 
   function render(distance: number, x: number, y: number, visible: boolean, shipVisible: boolean, levelIndex = 0) {
     root.visible = visible;
-    floor.color.set(levelIndex === 3 ? '#251b24' : levelIndex === 2 ? '#29232b' : levelIndex === 1 ? '#192a3a' : '#101e2b');
-    panel.color.set(levelIndex === 3 ? '#57445f' : levelIndex === 2 ? '#63504a' : levelIndex === 1 ? '#4b4261' : '#1c3342');
-    marking.color.set(levelIndex === 3 ? '#ef784f' : levelIndex === 2 ? '#cf905b' : levelIndex === 1 ? '#6c7793' : '#47605d');
+    floor.color.set(levelIndex === 4 ? '#31546b' : levelIndex === 3 ? '#251b24' : levelIndex === 2 ? '#29232b' : levelIndex === 1 ? '#192a3a' : '#101e2b');
+    panel.color.set(levelIndex === 4 ? '#64808c' : levelIndex === 3 ? '#57445f' : levelIndex === 2 ? '#63504a' : levelIndex === 1 ? '#4b4261' : '#1c3342');
+    marking.color.set(levelIndex === 4 ? '#a7c9cd' : levelIndex === 3 ? '#ef784f' : levelIndex === 2 ? '#cf905b' : levelIndex === 1 ? '#6c7793' : '#47605d');
     segmentLayout(distance).forEach((layout, slot) => {
       const { group, buildings } = segments[slot]!;
       group.position.y = layout.y;

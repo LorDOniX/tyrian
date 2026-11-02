@@ -33,7 +33,7 @@ test('all upgrade prices are doubled, and fourth mission has denser new waves', 
   assert.equal(startAtBoss(true, 'boss4'), true);
   assert.equal(startAtBoss(false, 'boss4'), false);
 });
-test('third victory carries purchased equipment and money into fourth; campaign ends after fourth', () => {
+test('third victory carries purchased equipment and money into fourth; fourth continues into fifth', () => {
   const state = createGame(false, 2, { weapon: 1, hull: 1, shield: 1 });
   state.status = 'victory'; state.score = 24000; state.credits = 3000;
   advanceLevel(state);
@@ -47,10 +47,10 @@ test('third victory carries purchased equipment and money into fourth; campaign 
   assert.equal(state.score, 24000);
   assert.equal(state.credits, 3000);
   state.status = 'victory';
-  const final = structuredClone(state);
   advanceLevel(state);
-  assert.deepEqual(state, final);
-  assert.equal(hasNextLevel(3), false);
+  assert.equal(state.levelIndex, 4);
+  assert.equal(state.credits, 3000);
+  assert.equal(hasNextLevel(3), true);
 });
 test('new enemies fire finite volleys with normalized speeds and eventually leave', () => {
   for (const [kind, count, speed] of [['wraith', 9, 7], ['bastion', 20, 6.3], ['rotor', 18, 5.5]] as const) {

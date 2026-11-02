@@ -16,7 +16,9 @@
     "dev:boss3": "vite --mode boss3",
     "dev:shop": "vite --mode shop",
     "dev:level4": "vite --mode level4",
-    "dev:boss4": "vite --mode boss4"
+    "dev:boss4": "vite --mode boss4",
+    "dev:level5": "vite --mode level5",
+    "dev:boss5": "vite --mode boss5"
   },
   "dependencies": {
     "three": "^0.187.0"

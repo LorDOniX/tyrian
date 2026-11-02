@@ -283,7 +283,7 @@ export function updateGame(state: GameState, input: Input, elapsed: number): voi
       state.bullets = state.bullets.filter(bullet => bullet.owner === 'player');
     }
     if (enemy.kind === 'turret') state.wrecks.push({ id: enemy.id, x: enemy.x, levelY: enemy.levelY, y: enemy.y });
-    state.score += enemy.kind === 'boss' ? (enemy.variant === 'dreadnought' ? 10000 : enemy.variant === 'fortress' ? 7500 : enemy.variant === 'convoy' ? 5000 : 2000) : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
+    state.score += enemy.kind === 'boss' ? (enemy.variant === 'sky' ? 12500 : enemy.variant === 'dreadnought' ? 10000 : enemy.variant === 'fortress' ? 7500 : enemy.variant === 'convoy' ? 5000 : 2000) : enemy.kind === 'turret' ? 200 : ENEMY_TYPES[enemy.kind].score;
     if (!part) explode(enemy.previousX + (enemy.x - enemy.previousX) * time,
       enemy.previousY + (enemy.y - enemy.previousY) * time);
     if (enemy.kind === 'airship') {

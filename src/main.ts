@@ -68,6 +68,8 @@ const debugDeparture = required<HTMLButtonElement>('#debug-departure');
 const debugBoss3 = required<HTMLButtonElement>('#debug-boss3');
 const debugLevel4 = required<HTMLButtonElement>('#debug-level4');
 const debugBoss4 = required<HTMLButtonElement>('#debug-boss4');
+const debugLevel5 = required<HTMLButtonElement>('#debug-level5');
+const debugBoss5 = required<HTMLButtonElement>('#debug-boss5');
 const debugShop = required<HTMLButtonElement>('#debug-shop');
 const debugBoss2 = required<HTMLButtonElement>('#debug-boss2');
 debugTools.hidden = !import.meta.env.DEV;
@@ -91,6 +93,10 @@ function enterLevel4() { Object.assign(state, createGame(false, 3)); debugLevel4
 function enterBoss4() { Object.assign(state, createGame(true, 3)); debugBoss4.blur(); continueGame(); }
 debugLevel4.addEventListener('click', enterLevel4);
 debugBoss4.addEventListener('click', enterBoss4);
+function enterLevel5() { Object.assign(state, createGame(false, 4)); debugLevel5.blur(); continueGame(); }
+function enterBoss5() { Object.assign(state, createGame(true, 4)); debugBoss5.blur(); continueGame(); }
+debugLevel5.addEventListener('click', enterLevel5);
+debugBoss5.addEventListener('click', enterBoss5);
 function previewDeparture() {
   Object.assign(state, createGame(false, state.levelIndex));
   beginLevelDeparture(state);
@@ -316,6 +322,8 @@ if (import.meta.hot) {
     debugBoss2.removeEventListener('click', enterBoss2);
     debugLevel4.removeEventListener('click', enterLevel4);
     debugBoss4.removeEventListener('click', enterBoss4);
+    debugLevel5.removeEventListener('click', enterLevel5);
+    debugBoss5.removeEventListener('click', enterBoss5);
     debugShop.removeEventListener('click', previewShop);
     shopOptions.removeEventListener('click', purchase);
     shopOptions.replaceChildren();

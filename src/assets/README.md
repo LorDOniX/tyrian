@@ -1,6 +1,6 @@
 # Tyrian FX atlas
 
-`tyrian-fx.png` je připravený RGBA atlas 512 × 1024 px (119 snímků).
+`tyrian-fx.png` je připravený RGBA atlas 512 × 1024 px (124 snímků).
 Vznikl z těchto souborů přidaných do repozitáře:
 
 - `Remastered Tyrian Graphics/newsh6.shp.000000.png`
@@ -70,3 +70,11 @@ První boss používá klip `commanderBoss` ze zdroje `newsh8`: celý výřez
 Má oblast 96 × 64 px na (0, 512). Kvůli ní atlas narostl na 512 × 1024 px;
 polohy předchozích výřezů zůstávají stejné a normalizované UV se přepočítají
 podle nového rozměru. Více ve `faze20.md`.
+
+Pátý level používá `newshf.shp.000000.png`:
+- Rudý maršál: celý trup `(0, 112, 144, 112)`, index 119.
+- Falcon: tři šedá letadla `(96/120/144, 0, 24, 28)`, indexy 120–122.
+- Emerald: zelené letadlo `(192, 0, 24, 28)`, index 123.
+
+Mraky vznikají procedurálně v `clouds.ts` pomocí CanvasTexture; nevyžadují
+externí texturu ani úpravu původních assetů.

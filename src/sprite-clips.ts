@@ -14,6 +14,12 @@ const shipFrames = (y: number) => [0, 48, 96].map(x => ({
 
 export const SPRITE_CLIPS = {
   ...PLAYER_SHIP_CLIPS,
+  skyBoss: { start: 119, fps: 1, loop: true, size: 6.4, width: 160 / 128, referenceCell: 32,
+    frames: [{ source: 'newshf.shp.000000.png', x: 0, y: 112, width: 144, height: 112 }] },
+  falconShip: { start: 120, fps: 1, loop: true, size: 2.5, width: 1, referenceCell: 32,
+    frames: [96, 120, 144].map(x => ({ source: 'newshf.shp.000000.png', x, y: 0, width: 24, height: 28 })) },
+  emeraldShip: { start: 123, fps: 1, loop: true, size: 2.6, width: 1, referenceCell: 32,
+    frames: [{ source: 'newshf.shp.000000.png', x: 192, y: 0, width: 24, height: 28 }] },
   commanderBoss: { start: 118, fps: 1, loop: true, size: 4.4, width: 1.5, referenceCell: 32,
     frames: [{ source: 'newsh8.shp.000000.png', x: 0, y: 28, width: 72, height: 56 }] },
   smallRock: { start: 116, fps: 1, loop: true, size: 1.8, width: 1, referenceCell: 32,
@@ -86,6 +92,8 @@ export function spriteFrame(name: SpriteClip, age: number): number | null {
 
 // Velké trupy mají vlastní obdélníky pod řadami malých snímků.
 export function atlasRegion(index: number) {
+  if (index === 119) return { x: 96, y: 512, width: 160, height: 128 };
+  if (index >= 120 && index <= 123) return { x: 256 + (index - 120) * 32, y: 512, width: 32, height: 32 };
   if (index === 118) return { x: 0, y: 512, width: 96, height: 64 };
   if (index === 116) return { x: 480, y: 192, width: 32, height: 32 };
   if (index === 117) return { x: 416, y: 224, width: 32, height: 32 };

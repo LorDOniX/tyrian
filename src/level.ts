@@ -45,6 +45,12 @@ export const LEVEL_EVENTS: readonly SpawnEvent[] = Object.freeze(
 );
 
 export function levelPart(time: number, index: LevelIndex = 0): string {
+  if (index === 4) {
+    if (time >= getLevel(4).duration) return 'Dokonči souboj';
+    if (time >= 44) return '3 / 3 · Rudá letka';
+    if (time >= 22) return '2 / 3 · Lovci v oblacích';
+    return '1 / 3 · Nad mraky';
+  }
   if (index === 3) {
     if (time >= getLevel(3).duration) return 'Dokonči souboj';
     if (time >= 42) return '3 / 3 · Poslední obranná linie';
@@ -75,7 +81,7 @@ export const GROUND_TARGETS: readonly Readonly<{ x: number; levelY: number }>[] 
   Object.freeze({ x: 0, levelY: 185 }),  // 43. sekunda
 ]);
 
-export type LevelIndex = 0 | 1 | 2 | 3;
+export type LevelIndex = 0 | 1 | 2 | 3 | 4;
 export type LevelDefinition = Readonly<{
   name: string; duration: number; events: readonly SpawnEvent[];
   groundTargets: readonly Readonly<{ x: number; levelY: number; weapon?: GroundWeapon }>[]; boss: boolean; bossVariant?: BossVariant;
@@ -146,6 +152,25 @@ foundryWave(35, 'rockSmall', [-6, 0, 6]);
 foundryWave(43, 'rockLarge', [0]);
 foundryWave(51, 'rockSmall', [-5, 5]);
 foundryWave(59, 'rockLarge', [-3, 3]);
+const sky: SpawnEvent[] = [];
+const skyWave = (at: number, kind: EnemyKind, xs: number[], drop?: PickupKind) => {
+  xs.forEach(x => sky.push({ at, kind, x, y: 14, drop }));
+};
+skyWave(1, 'falcon', [-5, 0, 5]);
+skyWave(5, 'emerald', [-4, 4], 'spread');
+skyWave(10, 'falcon', [-6, -2, 2, 6]);
+skyWave(15, 'emerald', [0], 'repair');
+skyWave(19, 'falcon', [-5, 0, 5]);
+skyWave(23, 'emerald', [-4, 4]);
+skyWave(28, 'falcon', [-6, -2, 2, 6], 'spread');
+skyWave(33, 'emerald', [-5, 0, 5]);
+skyWave(38, 'falcon', [-5, 0, 5]);
+skyWave(42, 'emerald', [0], 'repair');
+skyWave(46, 'falcon', [-6, -2, 2, 6]);
+skyWave(50, 'emerald', [-4, 4]);
+skyWave(55, 'falcon', [-5, 0, 5], 'spread');
+skyWave(59, 'emerald', [-5, 0, 5]);
+skyWave(63, 'falcon', [-5, 0, 5]);
 export const LEVELS: readonly LevelDefinition[] = Object.freeze([
   Object.freeze({ name: 'Základna', duration: LEVEL_DURATION, events: LEVEL_EVENTS, groundTargets: GROUND_TARGETS, boss: true, bossVariant: 'commander' }),
   Object.freeze({ name: 'Vzdušný konvoj', duration: 48,
@@ -163,6 +188,9 @@ export const LEVELS: readonly LevelDefinition[] = Object.freeze([
       { x: -5, levelY: 113, weapon: 'twinSteel' as const }, { x: -4, levelY: 137 }, { x: 4, levelY: 169 },
       { x: 5, levelY: 201, weapon: 'twinGold' as const }, { x: 0, levelY: 225 }]),
     boss: true, bossVariant: 'dreadnought' }),
+  Object.freeze({ name: 'Rudé nebe', duration: 68,
+    events: Object.freeze(sky.sort((a, b) => a.at - b.at).map(event => Object.freeze(event))),
+    groundTargets: Object.freeze([]), boss: true, bossVariant: 'sky' }),
 ]);
 export function getLevel(index: LevelIndex): LevelDefinition { return LEVELS[index]!; }
 

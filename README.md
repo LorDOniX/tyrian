@@ -107,3 +107,13 @@ souboj s jeho bossem: `npm run dev:boss4`. Produkční hra vždy začíná level
 - `tests/` – testy kolizí, herních pravidel a celé úrovně.
 - `src/style.css` – základní styly.
 - `index.html` – kontejner scény a nápověda.
+
+[Fáze 21](faze21.md) přidává pátou misi **Rudé nebe**, dvě letadla a bosse
+Rudého maršála z `newshf.shp.000000.png`. Posouvající se mraky překrývají
+nepřátele, hráč a projektily zůstávají nad nimi. Po čtvrté misi pokračuje
+kampaň do páté; kampaň končí po jejím bossovi a odletu.
+
+- `npm run dev:level5` – přímý start páté mise.
+- `npm run dev:boss5` – přímý start před jejím bossem.
+
+Obě volby jsou také ve vývojových tlačítkách.
